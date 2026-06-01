@@ -212,6 +212,11 @@ export default function AuthScreen({
       return;
     }
 
+    if (selectedRegRole === 'ADMIN') {
+      setRegError('Não é permitido criar uma conta sob a modalidade Administrador através do cadastro comum. Favor utilizar um e-mail de acesso previamente credenciado.');
+      return;
+    }
+
     // Email Syntax Validation
     if (!isValidEmail(regEmail)) {
       setRegError('E-mail em formato inválido. Por favor, forneça um endereço de e-mail real.');
@@ -450,32 +455,6 @@ export default function AuthScreen({
           extra: { photoUrl: regPhoto }
         });
       }, 1500);
-    } else if (selectedRegRole === 'ADMIN') {
-      onAddUser({
-        id: uniqueId,
-        name: regName,
-        email: regEmail,
-        role: 'ADMIN',
-        password: regPassword,
-        phone: regPhone,
-        document: regDocument,
-        photoUrl: regPhoto,
-        city: regCity || 'São Paulo',
-        createdAt: registrationDate,
-        isApproved: false,
-        approvalStatus: 'pending'
-      });
-
-      setRegSuccess(true);
-      setTimeout(() => {
-        onLoginSuccess({
-          id: uniqueId,
-          name: regName,
-          role: 'ADMIN',
-          email: regEmail,
-          extra: { phone: regPhone, document: regDocument, photoUrl: regPhoto }
-        });
-      }, 1500);
     }
   };
 
@@ -659,7 +638,7 @@ export default function AuthScreen({
                   {/* Primary Registration Role Switcher */}
                   <div className="space-y-1 pb-1">
                     <label className="text-[10px] uppercase font-bold text-slate-500 block">Qual sua modalidade de uso?</label>
-                    <div className="grid shadow-2xs grid-cols-2 sm:grid-cols-5 gap-1.5">
+                    <div className="grid shadow-2xs grid-cols-2 sm:grid-cols-4 gap-1.5">
                       <button
                         type="button"
                         onClick={() => { setSelectedRegRole('HOST'); setRegError(''); }}
@@ -689,14 +668,6 @@ export default function AuthScreen({
                         title="Rede de Apoio"
                       >
                         🛠️ Apoio
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setSelectedRegRole('ADMIN'); setRegError(''); }}
-                        className={`py-2 px-1 rounded-xl text-[10px] font-black transition-all cursor-pointer text-center ${selectedRegRole === 'ADMIN' ? 'bg-[#0B1F33] text-white shadow-xs' : 'bg-slate-50 border border-slate-200 text-slate-600'}`}
-                        title="Administrador"
-                      >
-                        💼 Admin
                       </button>
                     </div>
                   </div>
@@ -1112,26 +1083,7 @@ export default function AuthScreen({
                     </div>
                   )}
 
-                  {/* ADMINISTRATOR DETAILS */}
-                  {selectedRegRole === 'ADMIN' && (
-                    <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] uppercase font-bold text-slate-600 block tracking-wider">Passo 2: Perfil Administrativo (HQ)</span>
-                      <p className="text-xs text-slate-500 leading-relaxed">
-                        Como Sócio-Administrador de unidade CleanHost, seu cadastro entrará para a fila de homologação. Uma vez ativado, você poderá supervisionar os faturamentos da região, cadastros de novos prestadores, reclamações e controles tributários.
-                      </p>
-                      <div className="space-y-1">
-                        <label className="text-[9px] uppercase font-bold text-slate-500 block">Cidade Principal da Sua Franquia / Unidade</label>
-                        <input
-                          type="text"
-                          value={regCity}
-                          onChange={(e) => setRegCity(e.target.value)}
-                          placeholder="Ex: Campinas - SP"
-                          className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs outline-none font-medium"
-                          required
-                        />
-                      </div>
-                    </div>
-                  )}
+
 
                   <button
                     type="submit"
