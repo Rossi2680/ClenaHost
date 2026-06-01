@@ -1,0 +1,10 @@
+{
+  "name": "CleanHost",
+  "description": "Plataforma inteligente de conexões operacionais e limpeza expressa para imóveis de aluguel por temporada.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
