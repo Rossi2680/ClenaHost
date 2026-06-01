@@ -41,6 +41,7 @@ export default function AdminSection({
   const [activeSubTab, setActiveSubTab] = useState<'kpis' | 'professionals' | 'redistribute' | 'financeConfig'>('kpis');
   const [reassignReqId, setReassignReqId] = useState<string>('');
   const [reassignCleanId, setReassignCleanId] = useState<string>('');
+  const [auditRoleFilter, setAuditRoleFilter] = useState<'CLEANER' | 'HOST' | 'CLIENTE' | 'SUPPORT'>('CLEANER');
 
   // Local state inputs for finance customization
   const [chkPix, setChkPix] = useState(financeSettings.pixKey);
@@ -434,37 +435,200 @@ export default function AdminSection({
           </div>
 
           {/* Active Members audit - Block / Unblock */}
-          <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
-            <h3 className="font-bold text-base text-[#0B1F33]">Profissionais Ativas no Sistema (Bloqueio Exclusivo)</h3>
-            
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {professionals.map(prof => (
-                <div 
-                  key={prof.id} 
-                  className={`border p-3.5 rounded-2xl flex items-center justify-between gap-3 transition-colors ${prof.isApproved ? 'border-gray-100' : 'border-rose-200 bg-rose-50/15'}`}
+          <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4 animate-fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b">
+              <div>
+                <h3 className="font-bold text-base text-[#0B1F33]">Membros Ativos no Sistema</h3>
+                <p className="text-[11px] text-gray-400 mt-0.5">Audite, gerencie e bloqueie/desbloqueie usuários cadastrados por categoria.</p>
+              </div>
+              
+              {/* Filter tabs */}
+              <div className="flex flex-wrap gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setAuditRoleFilter('CLEANER')}
+                  className={`px-3 py-1.5 rounded-lg text-2xs font-extrabold transition-all cursor-pointer ${auditRoleFilter === 'CLEANER' ? 'bg-[#0B1F33] text-white' : 'text-slate-600 hover:text-[#0B1F33]'}`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <img 
-                      src={prof.photoUrl} 
-                      alt={prof.name} 
-                      className={`w-9 h-9 rounded-full object-cover shrink-0 ${!prof.isApproved && 'grayscale opacity-60'}`}
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="min-w-0">
-                      <h4 className={`font-bold text-xs truncate ${prof.isApproved ? 'text-[#0B1F33]' : 'text-rose-600 line-through'}`}>{prof.name}</h4>
-                      <p className="text-[9px] text-gray-400">Score: {prof.score} • {prof.region}</p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => handleBlockProfessional(prof.id, prof.isApproved)}
-                    className={`cursor-pointer px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all ${prof.isApproved ? 'text-rose-600 hover:bg-rose-50' : 'bg-emerald-100 text-emerald-800'}`}
-                  >
-                    {prof.isApproved ? <span className="flex items-center gap-0.5"><Ban className="w-3 h-3" /> Bloquear</span> : 'Reativar'}
-                  </button>
-                </div>
-              ))}
+                  🧹 Faxina ({professionals.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuditRoleFilter('HOST')}
+                  className={`px-3 py-1.5 rounded-lg text-2xs font-extrabold transition-all cursor-pointer ${auditRoleFilter === 'HOST' ? 'bg-[#0A66FF] text-white' : 'text-slate-600 hover:text-[#0A66FF]'}`}
+                >
+                  🏡 Anfitriões ({registeredUsers.filter((u: any) => u.role === 'HOST' && u.approvalStatus === 'approved').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuditRoleFilter('CLIENTE')}
+                  className={`px-3 py-1.5 rounded-lg text-2xs font-extrabold transition-all cursor-pointer ${auditRoleFilter === 'CLIENTE' ? 'bg-purple-600 text-white' : 'text-slate-600 hover:text-purple-600'}`}
+                >
+                  👤 Clientes ({registeredUsers.filter((u: any) => u.role === 'CLIENTE' && u.approvalStatus === 'approved').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuditRoleFilter('SUPPORT')}
+                  className={`px-3 py-1.5 rounded-lg text-2xs font-extrabold transition-all cursor-pointer ${auditRoleFilter === 'SUPPORT' ? 'bg-[#4338CA] text-white' : 'text-slate-600 hover:text-[#4338CA]'}`}
+                >
+                  🔧 Apoio ({registeredUsers.filter((u: any) => u.role === 'SUPPORT' && u.approvalStatus === 'approved').length})
+                </button>
+              </div>
             </div>
+
+            {auditRoleFilter === 'CLEANER' && (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-fade-in">
+                {professionals.length === 0 ? (
+                  <p className="text-xs text-gray-400 col-span-full py-4 text-center">Nenhuma profissional ativa no momento.</p>
+                ) : (
+                  professionals.map(prof => (
+                    <div 
+                      key={prof.id} 
+                      className={`border p-3.5 rounded-2xl flex items-center justify-between gap-3 transition-colors ${prof.isApproved ? 'border-gray-100 bg-white' : 'border-rose-200 bg-rose-50/15'}`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img 
+                          src={prof.photoUrl} 
+                          alt={prof.name} 
+                          className={`w-9 h-9 rounded-full object-cover shrink-0 ${!prof.isApproved && 'grayscale opacity-60'}`}
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="min-w-0">
+                          <h4 className={`font-bold text-xs truncate ${prof.isApproved ? 'text-[#0B1F33]' : 'text-rose-600 line-through'}`}>{prof.name}</h4>
+                          <p className="text-[9px] text-gray-400">Score: {prof.score} • {prof.region}</p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleBlockProfessional(prof.id, prof.isApproved)}
+                        className={`cursor-pointer px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all shrink-0 ${prof.isApproved ? 'text-rose-600 hover:bg-rose-50 border border-transparent' : 'bg-emerald-100 text-emerald-800 border border-transparent'}`}
+                      >
+                        {prof.isApproved ? <span className="flex items-center gap-0.5"><Ban className="w-3 h-3" /> Bloquear</span> : 'Reativar'}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {auditRoleFilter === 'HOST' && (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-fade-in">
+                {registeredUsers.filter((u: any) => u.role === 'HOST' && u.approvalStatus === 'approved').length === 0 ? (
+                  <p className="text-xs text-gray-400 col-span-full py-4 text-center">Nenhum anfitrião ativo no momento.</p>
+                ) : (
+                  registeredUsers.filter((u: any) => u.role === 'HOST' && u.approvalStatus === 'approved').map((user: any) => (
+                    <div 
+                      key={user.id} 
+                      className={`border p-3.5 rounded-2xl flex items-center justify-between gap-3 transition-colors ${user.isApproved ? 'border-gray-100 bg-white' : 'border-rose-200 bg-rose-50/15'}`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img 
+                          src={user.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80'} 
+                          alt={user.name} 
+                          className={`w-9 h-9 rounded-full object-cover shrink-0 ${!user.isApproved && 'grayscale opacity-60'}`}
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="min-w-0">
+                          <h4 className={`font-bold text-xs truncate ${user.isApproved ? 'text-[#0B1F33]' : 'text-rose-600 line-through'}`}>{user.name}</h4>
+                          <p className="text-[9px] text-gray-400 truncate">{user.email || 'N/A'}</p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (onUpdateRegisteredUserStatus) {
+                            onUpdateRegisteredUserStatus(user.id, !user.isApproved, 'approved');
+                            alert(`Status de ${user.name} alterado com sucesso!`);
+                          }
+                        }}
+                        className={`cursor-pointer px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all shrink-0 ${user.isApproved ? 'text-rose-600 hover:bg-rose-50' : 'bg-emerald-100 text-emerald-800'}`}
+                      >
+                        {user.isApproved ? <span className="flex items-center gap-0.5"><Ban className="w-3 h-3" /> Bloquear</span> : 'Reativar'}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {auditRoleFilter === 'CLIENTE' && (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-fade-in">
+                {registeredUsers.filter((u: any) => u.role === 'CLIENTE' && u.approvalStatus === 'approved').length === 0 ? (
+                  <p className="text-xs text-gray-400 col-span-full py-4 text-center">Nenhum cliente ativo no momento.</p>
+                ) : (
+                  registeredUsers.filter((u: any) => u.role === 'CLIENTE' && u.approvalStatus === 'approved').map((user: any) => (
+                    <div 
+                      key={user.id} 
+                      className={`border p-3.5 rounded-2xl flex items-center justify-between gap-3 transition-colors ${user.isApproved ? 'border-gray-100 bg-white' : 'border-rose-200 bg-rose-50/15'}`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img 
+                          src={user.photoUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&h=150&q=80'} 
+                          alt={user.name} 
+                          className={`w-9 h-9 rounded-full object-cover shrink-0 ${!user.isApproved && 'grayscale opacity-60'}`}
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="min-w-0">
+                          <h4 className={`font-bold text-xs truncate ${user.isApproved ? 'text-[#0B1F33]' : 'text-rose-600 line-through'}`}>{user.name}</h4>
+                          <p className="text-[9px] text-purple-700 font-bold truncate">👤 {user.phone || 'N/A'}</p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (onUpdateRegisteredUserStatus) {
+                            onUpdateRegisteredUserStatus(user.id, !user.isApproved, 'approved');
+                            alert(`Status de ${user.name} alterado com sucesso!`);
+                          }
+                        }}
+                        className={`cursor-pointer px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all shrink-0 ${user.isApproved ? 'text-rose-600 hover:bg-rose-50 cursor-pointer' : 'bg-emerald-100 text-emerald-800'}`}
+                      >
+                        {user.isApproved ? <span className="flex items-center gap-0.5"><Ban className="w-3 h-3" /> Bloquear</span> : 'Reativar'}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {auditRoleFilter === 'SUPPORT' && (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-fade-in">
+                {registeredUsers.filter((u: any) => u.role === 'SUPPORT' && u.approvalStatus === 'approved').length === 0 ? (
+                  <p className="text-xs text-gray-400 col-span-full py-4 text-center">Nenhum parceiro de apoio ativo no momento.</p>
+                ) : (
+                  registeredUsers.filter((u: any) => u.role === 'SUPPORT' && u.approvalStatus === 'approved').map((user: any) => (
+                    <div 
+                      key={user.id} 
+                      className={`border p-3.5 rounded-2xl flex items-center justify-between gap-3 transition-colors ${user.isApproved ? 'border-gray-100 bg-white' : 'border-rose-200 bg-rose-50/15'}`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img 
+                          src={user.photoUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80'} 
+                          alt={user.name} 
+                          className={`w-9 h-9 rounded-full object-cover shrink-0 ${!user.isApproved && 'grayscale opacity-60'}`}
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="min-w-0">
+                          <h4 className={`font-bold text-xs truncate ${user.isApproved ? 'text-[#0B1F33]' : 'text-rose-600 line-through'}`}>{user.name}</h4>
+                          <p className="text-[9px] text-gray-400 truncate">{user.category || 'Parceiro Geral'}</p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (onUpdateRegisteredUserStatus) {
+                            onUpdateRegisteredUserStatus(user.id, !user.isApproved, 'approved');
+                            alert(`Status de ${user.name} alterado com sucesso!`);
+                          }
+                        }}
+                        className={`cursor-pointer px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all shrink-0 ${user.isApproved ? 'text-rose-600 hover:bg-rose-50' : 'bg-emerald-100 text-emerald-800'}`}
+                      >
+                        {user.isApproved ? <span className="flex items-center gap-0.5"><Ban className="w-3 h-3" /> Bloquear</span> : 'Reativar'}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
         </div>

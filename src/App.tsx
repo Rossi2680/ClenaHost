@@ -29,7 +29,7 @@ export default function App() {
   const [appMode, setAppMode] = useState<'demo' | 'field'>('field');
 
   // Admin access screen switcher: lets administrators swap to any other profile view on the fly
-  const [adminViewMode, setAdminViewMode] = useState<'admin' | 'host' | 'cleaner' | 'support'>('admin');
+  const [adminViewMode, setAdminViewMode] = useState<'admin' | 'host' | 'cleaner' | 'support' | 'cliente'>('admin');
 
   const [registeredUsers, setRegisteredUsers] = useState<any[]>(() => {
     const saved = localStorage.getItem('cleanhost_registered_users');
@@ -142,6 +142,101 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('cleanhost_finance_logs', JSON.stringify(financeLogs));
   }, [financeLogs]);
+
+  // Synchronize dynamic states in real-time with our fullstack Express server so that they are shared across devices!
+  const [isInitialLoadCompleted, setIsInitialLoadCompleted] = useState(false);
+  const lastServerStateRef = React.useRef<string>('');
+
+  // 1. Initial State Fetch on Mount and Polling every 5 seconds to fetch new registrations/updates instantly
+  useEffect(() => {
+    async function fetchState() {
+      try {
+        const response = await fetch('/api/state');
+        if (response.ok) {
+          const data = await response.json();
+          if (data) {
+            const stateStr = JSON.stringify(data);
+            if (stateStr !== lastServerStateRef.current) {
+              lastServerStateRef.current = stateStr;
+              
+              if (Array.isArray(data.registeredUsers)) setRegisteredUsers(data.registeredUsers);
+              if (Array.isArray(data.properties)) setProperties(data.properties);
+              if (Array.isArray(data.professionals)) setProfessionals(data.professionals);
+              if (Array.isArray(data.supportProfessionals)) setSupportProfessionals(data.supportProfessionals);
+              if (Array.isArray(data.requests)) setRequests(data.requests);
+              if (Array.isArray(data.supportJobs)) setSupportJobs(data.supportJobs);
+              if (data.financeSettings) setFinanceSettings(data.financeSettings);
+              if (Array.isArray(data.financeLogs)) setFinanceLogs(data.financeLogs);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Falha ao sincronizar estados com o servidor CleanHost:', err);
+      } finally {
+        setIsInitialLoadCompleted(true);
+      }
+    }
+
+    fetchState();
+    const handle = setInterval(fetchState, 5000); // Polling every 5 seconds for live real-time response!
+    return () => clearInterval(handle);
+  }, []);
+
+  // 2. Upload changes to Server-Side DB
+  useEffect(() => {
+    if (!isInitialLoadCompleted) return;
+
+    const currentStateStr = JSON.stringify({
+      registeredUsers,
+      properties,
+      professionals,
+      supportProfessionals,
+      requests,
+      supportJobs,
+      financeSettings,
+      financeLogs
+    });
+
+    // Avoid syncing back if the local state has not changed from what we got from the server
+    if (currentStateStr === lastServerStateRef.current) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await fetch('/api/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: currentStateStr,
+          signal: controller.signal
+        });
+        if (response.ok) {
+          const updatedData = await response.json();
+          lastServerStateRef.current = JSON.stringify(updatedData);
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Falha ao enviar alteração para o servidor:', err);
+        }
+      }
+    }, 400);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeoutId);
+    };
+  }, [
+    isInitialLoadCompleted,
+    registeredUsers,
+    properties,
+    professionals,
+    supportProfessionals,
+    requests,
+    supportJobs,
+    financeSettings,
+    financeLogs
+  ]);
 
   // Global State Setters Passer callbacks
   const handleAddUser = (newUser: any) => {
@@ -563,6 +658,16 @@ export default function App() {
                     🏡 Como Anfitrião
                   </button>
                   <button
+                    onClick={() => setAdminViewMode('cliente')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      adminViewMode === 'cliente'
+                        ? 'bg-purple-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    👤 Como Cliente
+                  </button>
+                  <button
                     onClick={() => setAdminViewMode('cleaner')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       adminViewMode === 'cleaner'
@@ -611,7 +716,7 @@ export default function App() {
             )}
 
             {/* Swappable Views */}
-            {(loggedInUser.role === 'ADMIN' ? adminViewMode === 'host' : (userRole === 'HOST' || userRole === 'CLIENTE')) && (
+            {(loggedInUser.role === 'ADMIN' ? (adminViewMode === 'host' || adminViewMode === 'cliente') : (userRole === 'HOST' || userRole === 'CLIENTE')) && (
               <HostSection 
                 properties={properties}
                 professionals={professionals.filter(p => p.isApproved)}
@@ -622,7 +727,7 @@ export default function App() {
                 onOpenReceipt={(req) => setSelectedReceiptRequest(req)}
                 financeSettings={financeSettings}
                 onRecordFinanceLog={(log: any) => setFinanceLogs(prev => [log, ...prev])}
-                userName={loggedInUser?.name || 'Anfitrião'}
+                userName={loggedInUser?.role === 'ADMIN' && adminViewMode === 'cliente' ? 'Cliente Simulado' : (loggedInUser?.name || 'Anfitrião')}
               />
             )}
 

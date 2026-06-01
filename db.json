@@ -1,0 +1,16 @@
+{
+  "registeredUsers": [],
+  "properties": [],
+  "professionals": [],
+  "supportProfessionals": [],
+  "requests": [],
+  "supportJobs": [],
+  "financeSettings": {
+    "pixKey": "cleanhost.oficial@gmail.com",
+    "standardTax": 12,
+    "loyaltyTax": 5,
+    "recipientAccount": "CleanHost Hold S.A. - Banco Cora IP",
+    "autoRepassActive": true
+  },
+  "financeLogs": []
+}
