@@ -155,18 +155,57 @@ export default function App() {
         if (response.ok) {
           const data = await response.json();
           if (data) {
+            // Helper to merge lists of objects by their "id" field so local and server states aren't wiped out
+            const mergeLists = (localList: any[], serverList: any[]) => {
+              const map = new Map();
+              if (Array.isArray(localList)) {
+                localList.forEach(item => {
+                  if (item && item.id) map.set(item.id, item);
+                });
+              }
+              if (Array.isArray(serverList)) {
+                serverList.forEach(item => {
+                  if (item && item.id) {
+                    const existing = map.get(item.id);
+                    if (existing) {
+                      map.set(item.id, { ...existing, ...item });
+                    } else {
+                      map.set(item.id, item);
+                    }
+                  }
+                });
+              }
+              return Array.from(map.values());
+            };
+
             const stateStr = JSON.stringify(data);
             if (stateStr !== lastServerStateRef.current) {
               lastServerStateRef.current = stateStr;
               
-              if (Array.isArray(data.registeredUsers)) setRegisteredUsers(data.registeredUsers);
-              if (Array.isArray(data.properties)) setProperties(data.properties);
-              if (Array.isArray(data.professionals)) setProfessionals(data.professionals);
-              if (Array.isArray(data.supportProfessionals)) setSupportProfessionals(data.supportProfessionals);
-              if (Array.isArray(data.requests)) setRequests(data.requests);
-              if (Array.isArray(data.supportJobs)) setSupportJobs(data.supportJobs);
-              if (data.financeSettings) setFinanceSettings(data.financeSettings);
-              if (Array.isArray(data.financeLogs)) setFinanceLogs(data.financeLogs);
+              if (Array.isArray(data.registeredUsers)) {
+                setRegisteredUsers(prev => mergeLists(prev, data.registeredUsers));
+              }
+              if (Array.isArray(data.properties)) {
+                setProperties(prev => mergeLists(prev, data.properties));
+              }
+              if (Array.isArray(data.professionals)) {
+                setProfessionals(prev => mergeLists(prev, data.professionals));
+              }
+              if (Array.isArray(data.supportProfessionals)) {
+                setSupportProfessionals(prev => mergeLists(prev, data.supportProfessionals));
+              }
+              if (Array.isArray(data.requests)) {
+                setRequests(prev => mergeLists(prev, data.requests));
+              }
+              if (Array.isArray(data.supportJobs)) {
+                setSupportJobs(prev => mergeLists(prev, data.supportJobs));
+              }
+              if (data.financeSettings) {
+                setFinanceSettings(prev => ({ ...prev, ...data.financeSettings }));
+              }
+              if (Array.isArray(data.financeLogs)) {
+                setFinanceLogs(prev => mergeLists(prev, data.financeLogs));
+              }
             }
           }
         }
