@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Catch-all safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global validation helpers
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // Rules for registeredUsers
+    match /registeredUsers/{userId} {
+      allow read: if true;
+      allow write: if isValidId(userId);
+    }
+
+    // Rules for properties
+    match /properties/{propertyId} {
+      allow read: if true;
+      allow write: if isValidId(propertyId);
+    }
+
+    // Rules for professionals
+    match /professionals/{professionalId} {
+      allow read: if true;
+      allow write: if isValidId(professionalId);
+    }
+
+    // Rules for supportProfessionals
+    match /supportProfessionals/{supId} {
+      allow read: if true;
+      allow write: if isValidId(supId);
+    }
+
+    // Rules for supportJobs
+    match /supportJobs/{jobId} {
+      allow read: if true;
+      allow write: if isValidId(jobId);
+    }
+
+    // Rules for requests (bookings)
+    match /requests/{requestId} {
+      allow read: if true;
+      allow write: if isValidId(requestId);
+    }
+
+    // Rules for financeSettings
+    match /financeSettings/{settingsId} {
+      allow read: if true;
+      allow write: if isValidId(settingsId);
+    }
+
+    // Rules for financeLogs
+    match /financeLogs/{logId} {
+      allow read: if true;
+      allow write: if isValidId(logId);
+    }
+  }
+}

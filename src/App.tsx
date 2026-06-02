@@ -12,6 +12,10 @@ import {
 import { Property, Professional, SupportProfessional, CleaningRequest, SupportJob, UserRole, RequestStatus } from './types';
 import { mockProperties, mockProfessionals, mockSupportProfessionals, mockRequests } from './data/mockData';
 
+// Firestore Integration APIs
+import { db, handleFirestoreError, OperationType } from './firebase';
+import { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot } from 'firebase/firestore';
+
 // Modular Child Section Imports
 import Logo from './components/Logo';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
@@ -110,161 +114,389 @@ export default function App() {
     }
   }, [loggedInUser]);
 
-  // Sync state to localstorage
+  // Sync state to localstorage securely with fallback support
   useEffect(() => {
-    localStorage.setItem('cleanhost_properties', JSON.stringify(properties));
+    try {
+      localStorage.setItem('cleanhost_properties', JSON.stringify(properties));
+    } catch (err) {
+      console.warn('Falha ao escrever propriedades no localStorage:', err);
+    }
   }, [properties]);
 
   useEffect(() => {
-    localStorage.setItem('cleanhost_professionals', JSON.stringify(professionals));
+    try {
+      localStorage.setItem('cleanhost_professionals', JSON.stringify(professionals));
+    } catch (err) {
+      console.warn('Falha ao escrever profissionais no localStorage:', err);
+    }
   }, [professionals]);
 
   useEffect(() => {
-    localStorage.setItem('cleanhost_support_professionals', JSON.stringify(supportProfessionals));
+    try {
+      localStorage.setItem('cleanhost_support_professionals', JSON.stringify(supportProfessionals));
+    } catch (err) {
+      console.warn('Falha ao escrever equipe de suporte no localStorage:', err);
+    }
   }, [supportProfessionals]);
 
   useEffect(() => {
-    localStorage.setItem('cleanhost_requests', JSON.stringify(requests));
+    try {
+      localStorage.setItem('cleanhost_requests', JSON.stringify(requests));
+    } catch (err) {
+      console.warn('Falha ao escrever solicitações no localStorage:', err);
+    }
   }, [requests]);
 
   useEffect(() => {
-    localStorage.setItem('cleanhost_support_jobs', JSON.stringify(supportJobs));
+    try {
+      localStorage.setItem('cleanhost_support_jobs', JSON.stringify(supportJobs));
+    } catch (err) {
+      console.warn('Falha ao escrever chamados de apoio no localStorage:', err);
+    }
   }, [supportJobs]);
 
   useEffect(() => {
-    localStorage.setItem('cleanhost_registered_users', JSON.stringify(registeredUsers));
+    try {
+      localStorage.setItem('cleanhost_registered_users', JSON.stringify(registeredUsers));
+    } catch (err) {
+      console.warn('Falha ao escrever usuários registrados no localStorage:', err);
+    }
   }, [registeredUsers]);
 
   useEffect(() => {
-    localStorage.setItem('cleanhost_finance_settings', JSON.stringify(financeSettings));
+    try {
+      localStorage.setItem('cleanhost_finance_settings', JSON.stringify(financeSettings));
+    } catch (err) {
+      console.warn('Falha ao escrever finanças no localStorage:', err);
+    }
   }, [financeSettings]);
 
   useEffect(() => {
-    localStorage.setItem('cleanhost_finance_logs', JSON.stringify(financeLogs));
+    try {
+      localStorage.setItem('cleanhost_finance_logs', JSON.stringify(financeLogs));
+    } catch (err) {
+      console.warn('Falha ao escrever logs no localStorage:', err);
+    }
   }, [financeLogs]);
 
-  // Synchronize dynamic states in real-time with our fullstack Express server so that they are shared across devices!
+  // Firebase sync Refs and states
   const [isInitialLoadCompleted, setIsInitialLoadCompleted] = useState(false);
-  const lastServerStateRef = React.useRef<string>('');
+  const lastSyncedUsersRef = React.useRef<any[]>([]);
+  const lastSyncedPropertiesRef = React.useRef<Property[]>([]);
+  const lastSyncedProfessionalsRef = React.useRef<Professional[]>([]);
+  const lastSyncedSupportProfessionalsRef = React.useRef<SupportProfessional[]>([]);
+  const lastSyncedRequestsRef = React.useRef<CleaningRequest[]>([]);
+  const lastSyncedSupportJobsRef = React.useRef<SupportJob[]>([]);
+  const lastSyncedFinanceLogsRef = React.useRef<any[]>([]);
+  const lastSyncedSettingsRef = React.useRef<any>(null);
 
-  // 1. Initial State Fetch on Mount and Polling every 5 seconds to fetch new registrations/updates instantly
-  useEffect(() => {
-    async function fetchState() {
-      try {
-        const response = await fetch('/api/state');
-        if (response.ok) {
-          const data = await response.json();
-          if (data) {
-            // Helper to merge lists of objects by their "id" field so local and server states aren't wiped out
-            const mergeLists = (localList: any[], serverList: any[]) => {
-              const map = new Map();
-              if (Array.isArray(localList)) {
-                localList.forEach(item => {
-                  if (item && item.id) map.set(item.id, item);
-                });
-              }
-              if (Array.isArray(serverList)) {
-                serverList.forEach(item => {
-                  if (item && item.id) {
-                    const existing = map.get(item.id);
-                    if (existing) {
-                      map.set(item.id, { ...existing, ...item });
-                    } else {
-                      map.set(item.id, item);
-                    }
-                  }
-                });
-              }
-              return Array.from(map.values());
-            };
+  // Firestore Sync Helpers
+  const syncCollectionToFirestore = async (
+    colName: string,
+    localItems: any[],
+    lastSyncedList: any[]
+  ) => {
+    const localMap = new Map(localItems.map(item => [item.id || 'single', item]));
+    const syncedMap = new Map(lastSyncedList.map(item => [item.id || 'single', item]));
 
-            const stateStr = JSON.stringify(data);
-            if (stateStr !== lastServerStateRef.current) {
-              lastServerStateRef.current = stateStr;
-              
-              if (Array.isArray(data.registeredUsers)) {
-                setRegisteredUsers(prev => mergeLists(prev, data.registeredUsers));
-              }
-              if (Array.isArray(data.properties)) {
-                setProperties(prev => mergeLists(prev, data.properties));
-              }
-              if (Array.isArray(data.professionals)) {
-                setProfessionals(prev => mergeLists(prev, data.professionals));
-              }
-              if (Array.isArray(data.supportProfessionals)) {
-                setSupportProfessionals(prev => mergeLists(prev, data.supportProfessionals));
-              }
-              if (Array.isArray(data.requests)) {
-                setRequests(prev => mergeLists(prev, data.requests));
-              }
-              if (Array.isArray(data.supportJobs)) {
-                setSupportJobs(prev => mergeLists(prev, data.supportJobs));
-              }
-              if (data.financeSettings) {
-                setFinanceSettings(prev => ({ ...prev, ...data.financeSettings }));
-              }
-              if (Array.isArray(data.financeLogs)) {
-                setFinanceLogs(prev => mergeLists(prev, data.financeLogs));
-              }
-            }
-          }
+    // 1. Write new/updated items
+    for (const item of localItems) {
+      const id = item.id || 'single';
+      const syncedItem = syncedMap.get(id);
+      if (!syncedItem || JSON.stringify(item) !== JSON.stringify(syncedItem)) {
+        try {
+          await setDoc(doc(db, colName, id), item);
+        } catch (err) {
+          console.warn(`Error writing ${id} to ${colName}:`, err);
         }
-      } catch (err) {
-        console.error('Falha ao sincronizar estados com o servidor CleanHost:', err);
-      } finally {
-        setIsInitialLoadCompleted(true);
       }
     }
 
-    fetchState();
-    const handle = setInterval(fetchState, 5000); // Polling every 5 seconds for live real-time response!
-    return () => clearInterval(handle);
+    // 2. Delete removed items
+    for (const item of lastSyncedList) {
+      const id = item.id || 'single';
+      if (!localMap.has(id)) {
+        try {
+          await deleteDoc(doc(db, colName, id));
+        } catch (err) {
+          console.warn(`Error deleting ${id} from ${colName}:`, err);
+        }
+      }
+    }
+  };
+
+  const syncSettingsToFirestore = async (localSettings: any, lastSynced: any) => {
+    if (JSON.stringify(localSettings) !== JSON.stringify(lastSynced)) {
+      try {
+        await setDoc(doc(db, 'financeSettings', 'config'), localSettings);
+      } catch (err) {
+        console.warn('Error syncing finance settings:', err);
+      }
+    }
+  };
+
+  // 1. Load initial data from Firebase and subscribe to real-time updates
+  useEffect(() => {
+    let active = true;
+    let unsubscribes: (() => void)[] = [];
+
+    async function initFirebase() {
+      try {
+        // Load collection docs helper
+        const loadCollection = async (colName: string): Promise<any[]> => {
+          const snap = await getDocs(collection(db, colName));
+          const list: any[] = [];
+          snap.forEach(d => list.push(d.data()));
+          return list;
+        };
+
+        const dbUsers = await loadCollection('registeredUsers');
+        const dbProperties = await loadCollection('properties');
+        const dbProfessionals = await loadCollection('professionals');
+        const dbSupProfessionals = await loadCollection('supportProfessionals');
+        const dbRequests = await loadCollection('requests');
+        const dbSupportJobs = await loadCollection('supportJobs');
+        const dbFinanceLogs = await loadCollection('financeLogs');
+
+        let dbFinanceSettings = null;
+        try {
+          const settingsSnap = await getDocs(collection(db, 'financeSettings'));
+          settingsSnap.forEach(d => {
+            if (d.id === 'config') {
+              dbFinanceSettings = d.data();
+            }
+          });
+        } catch (e) {
+          console.warn('Could not load finance settings initial:', e);
+        }
+
+        if (!active) return;
+
+        // If database is completely empty (fresh project setup), initialize it with mock/default data so the UX works nicely
+        const isDbEmpty = dbUsers.length === 0 && dbProperties.length === 0;
+
+        if (isDbEmpty) {
+          console.log('[CleanHost] Database is empty. Bootstrapping initial records...');
+          // Use localStorage or mock data
+          const initialUsers = registeredUsers.length > 0 ? registeredUsers : [];
+          const initialProperties = properties.length > 0 ? properties : mockProperties;
+          const initialProfessionals = professionals.length > 0 ? professionals : mockProfessionals;
+          const initialSups = supportProfessionals.length > 0 ? supportProfessionals : mockSupportProfessionals;
+          const initialRequests = requests.length > 0 ? requests : mockRequests;
+          const initialJobs = supportJobs.length > 0 ? supportJobs : [];
+          const initialLogs = financeLogs.length > 0 ? financeLogs : [];
+          const initialSettings = financeSettings;
+
+          setRegisteredUsers(initialUsers);
+          setProperties(initialProperties);
+          setProfessionals(initialProfessionals);
+          setSupportProfessionals(initialSups);
+          setRequests(initialRequests);
+          setSupportJobs(initialJobs);
+          setFinanceLogs(initialLogs);
+          setFinanceSettings(initialSettings);
+
+          lastSyncedUsersRef.current = initialUsers;
+          lastSyncedPropertiesRef.current = initialProperties;
+          lastSyncedProfessionalsRef.current = initialProfessionals;
+          lastSyncedSupportProfessionalsRef.current = initialSups;
+          lastSyncedRequestsRef.current = initialRequests;
+          lastSyncedSupportJobsRef.current = initialJobs;
+          lastSyncedFinanceLogsRef.current = initialLogs;
+          lastSyncedSettingsRef.current = initialSettings;
+
+          // Hydrate Firestore immediately (asynchronous non-blocking)
+          initialUsers.forEach(u => setDoc(doc(db, 'registeredUsers', u.id), u).catch(e => console.error(e)));
+          initialProperties.forEach(p => setDoc(doc(db, 'properties', p.id), p).catch(e => console.error(e)));
+          initialProfessionals.forEach(pr => setDoc(doc(db, 'professionals', pr.id), pr).catch(e => console.error(e)));
+          initialSups.forEach(s => setDoc(doc(db, 'supportProfessionals', s.id), s).catch(e => console.error(e)));
+          initialRequests.forEach(r => setDoc(doc(db, 'requests', r.id), r).catch(e => console.error(e)));
+          initialJobs.forEach(j => setDoc(doc(db, 'supportJobs', j.id), j).catch(e => console.error(e)));
+          initialLogs.forEach(l => setDoc(doc(db, 'financeLogs', l.id), l).catch(e => console.error(e)));
+          setDoc(doc(db, 'financeSettings', 'config'), initialSettings).catch(e => console.error(e));
+
+        } else {
+          console.log('[CleanHost] Populating state from Firestore centralized cloud storage...');
+          setRegisteredUsers(dbUsers);
+          setProperties(dbProperties);
+          setProfessionals(dbProfessionals);
+          setSupportProfessionals(dbSupProfessionals);
+          setRequests(dbRequests);
+          setSupportJobs(dbSupportJobs);
+          setFinanceLogs(dbFinanceLogs);
+          if (dbFinanceSettings) {
+            setFinanceSettings(dbFinanceSettings);
+          }
+
+          lastSyncedUsersRef.current = dbUsers;
+          lastSyncedPropertiesRef.current = dbProperties;
+          lastSyncedProfessionalsRef.current = dbProfessionals;
+          lastSyncedSupportProfessionalsRef.current = dbSupProfessionals;
+          lastSyncedRequestsRef.current = dbRequests;
+          lastSyncedSupportJobsRef.current = dbSupportJobs;
+          lastSyncedFinanceLogsRef.current = dbFinanceLogs;
+          if (dbFinanceSettings) {
+            lastSyncedSettingsRef.current = dbFinanceSettings;
+          }
+        }
+
+        // Setup live subscriptions to keep all open tabs on different devices fully in real-time sync with Zero Lag!
+        unsubscribes.push(
+          onSnapshot(collection(db, 'registeredUsers'), (snap) => {
+            const list: any[] = [];
+            snap.forEach(d => list.push(d.data()));
+            setRegisteredUsers(prev => {
+              if (JSON.stringify(prev) !== JSON.stringify(list)) {
+                lastSyncedUsersRef.current = list;
+                return list;
+              }
+              return prev;
+            });
+          }, (err) => handleFirestoreError(err, OperationType.GET, 'registeredUsers')),
+
+          onSnapshot(collection(db, 'properties'), (snap) => {
+            const list: Property[] = [];
+            snap.forEach(d => list.push(d.data() as Property));
+            setProperties(prev => {
+              if (JSON.stringify(prev) !== JSON.stringify(list)) {
+                lastSyncedPropertiesRef.current = list;
+                return list;
+              }
+              return prev;
+            });
+          }, (err) => handleFirestoreError(err, OperationType.GET, 'properties')),
+
+          onSnapshot(collection(db, 'professionals'), (snap) => {
+            const list: Professional[] = [];
+            snap.forEach(d => list.push(d.data() as Professional));
+            setProfessionals(prev => {
+              if (JSON.stringify(prev) !== JSON.stringify(list)) {
+                lastSyncedProfessionalsRef.current = list;
+                return list;
+              }
+              return prev;
+            });
+          }, (err) => handleFirestoreError(err, OperationType.GET, 'professionals')),
+
+          onSnapshot(collection(db, 'supportProfessionals'), (snap) => {
+            const list: SupportProfessional[] = [];
+            snap.forEach(d => list.push(d.data() as SupportProfessional));
+            setSupportProfessionals(prev => {
+              if (JSON.stringify(prev) !== JSON.stringify(list)) {
+                lastSyncedSupportProfessionalsRef.current = list;
+                return list;
+              }
+              return prev;
+            });
+          }, (err) => handleFirestoreError(err, OperationType.GET, 'supportProfessionals')),
+
+          onSnapshot(collection(db, 'requests'), (snap) => {
+            const list: CleaningRequest[] = [];
+            snap.forEach(d => list.push(d.data() as CleaningRequest));
+            setRequests(prev => {
+              if (JSON.stringify(prev) !== JSON.stringify(list)) {
+                lastSyncedRequestsRef.current = list;
+                return list;
+              }
+              return prev;
+            });
+          }, (err) => handleFirestoreError(err, OperationType.GET, 'requests')),
+
+          onSnapshot(collection(db, 'supportJobs'), (snap) => {
+            const list: SupportJob[] = [];
+            snap.forEach(d => list.push(d.data() as SupportJob));
+            setSupportJobs(prev => {
+              if (JSON.stringify(prev) !== JSON.stringify(list)) {
+                lastSyncedSupportJobsRef.current = list;
+                return list;
+              }
+              return prev;
+            });
+          }, (err) => handleFirestoreError(err, OperationType.GET, 'supportJobs')),
+
+          onSnapshot(collection(db, 'financeLogs'), (snap) => {
+            const list: any[] = [];
+            snap.forEach(d => list.push(d.data()));
+            setFinanceLogs(prev => {
+              if (JSON.stringify(prev) !== JSON.stringify(list)) {
+                lastSyncedFinanceLogsRef.current = list;
+                return list;
+              }
+              return prev;
+            });
+          }, (err) => handleFirestoreError(err, OperationType.GET, 'financeLogs')),
+
+          onSnapshot(collection(db, 'financeSettings'), (snap) => {
+            let data: any = null;
+            snap.forEach(d => {
+              if (d.id === 'config') data = d.data();
+            });
+            if (data) {
+              const actualConfig = data;
+              setFinanceSettings(prev => {
+                if (JSON.stringify(prev) !== JSON.stringify(actualConfig)) {
+                  lastSyncedSettingsRef.current = actualConfig;
+                  return actualConfig;
+                }
+                return prev;
+              });
+            }
+          }, (err) => handleFirestoreError(err, OperationType.GET, 'financeSettings'))
+        );
+
+      } catch (err) {
+        console.error('Falha geral ao conectar com Firestore:', err);
+      } finally {
+        if (active) {
+          setIsInitialLoadCompleted(true);
+        }
+      }
+    }
+
+    initFirebase();
+
+    return () => {
+      active = false;
+      unsubscribes.forEach(u => u());
+    };
   }, []);
 
-  // 2. Upload changes to Server-Side DB
+  // 2. Incremental Sync back to Firestore on any state edits made within this instance!
   useEffect(() => {
     if (!isInitialLoadCompleted) return;
 
-    const currentStateStr = JSON.stringify({
-      registeredUsers,
-      properties,
-      professionals,
-      supportProfessionals,
-      requests,
-      supportJobs,
-      financeSettings,
-      financeLogs
-    });
-
-    // Avoid syncing back if the local state has not changed from what we got from the server
-    if (currentStateStr === lastServerStateRef.current) {
-      return;
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(async () => {
+    const performSync = async () => {
       try {
-        const response = await fetch('/api/state', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: currentStateStr,
-          signal: controller.signal
-        });
-        if (response.ok) {
-          const updatedData = await response.json();
-          lastServerStateRef.current = JSON.stringify(updatedData);
-        }
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.error('Falha ao enviar alteração para o servidor:', err);
-        }
-      }
-    }, 400);
+        await syncCollectionToFirestore('registeredUsers', registeredUsers, lastSyncedUsersRef.current);
+        lastSyncedUsersRef.current = registeredUsers;
 
-    return () => {
-      controller.abort();
-      clearTimeout(timeoutId);
+        await syncCollectionToFirestore('properties', properties, lastSyncedPropertiesRef.current);
+        lastSyncedPropertiesRef.current = properties;
+
+        await syncCollectionToFirestore('professionals', professionals, lastSyncedProfessionalsRef.current);
+        lastSyncedProfessionalsRef.current = professionals;
+
+        await syncCollectionToFirestore('supportProfessionals', supportProfessionals, lastSyncedSupportProfessionalsRef.current);
+        lastSyncedSupportProfessionalsRef.current = supportProfessionals;
+
+        await syncCollectionToFirestore('requests', requests, lastSyncedRequestsRef.current);
+        lastSyncedRequestsRef.current = requests;
+
+        await syncCollectionToFirestore('supportJobs', supportJobs, lastSyncedSupportJobsRef.current);
+        lastSyncedSupportJobsRef.current = supportJobs;
+
+        await syncCollectionToFirestore('financeLogs', financeLogs, lastSyncedFinanceLogsRef.current);
+        lastSyncedFinanceLogsRef.current = financeLogs;
+
+        await syncSettingsToFirestore(financeSettings, lastSyncedSettingsRef.current);
+        lastSyncedSettingsRef.current = financeSettings;
+      } catch (err) {
+        console.error('Erro na sincronização de dados:', err);
+      }
     };
+
+    const handle = setTimeout(performSync, 400);
+    return () => clearTimeout(handle);
   }, [
     isInitialLoadCompleted,
     registeredUsers,

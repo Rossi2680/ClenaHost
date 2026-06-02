@@ -100,8 +100,40 @@ export default function AuthScreen({
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result) {
-        setRegPhoto(e.target.result as string);
-        setRegError('');
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const max_size = 400; // 400px maximum resolution is ideal for avatar photos
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > max_size) {
+              height = Math.round((height * max_size) / width);
+              width = max_size;
+            }
+          } else {
+            if (height > max_size) {
+              width = Math.round((width * max_size) / height);
+              height = max_size;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            // Save as low-footprint jpeg image at 75% quality (~20-40kb instead of 5-10MB!)
+            const compressedUrl = canvas.toDataURL('image/jpeg', 0.75);
+            setRegPhoto(compressedUrl);
+            setRegError('');
+          } else {
+            setRegPhoto(e.target?.result as string);
+            setRegError('');
+          }
+        };
+        img.src = e.target.result as string;
       }
     };
     reader.readAsDataURL(file);

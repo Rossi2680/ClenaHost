@@ -1,0 +1,199 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A registered user in CleanHost",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "password": { "type": "string" },
+        "phone": { "type": "string" },
+        "document": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "city": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "isApproved": { "type": "boolean" },
+        "approvalStatus": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "Property": {
+      "title": "Property",
+      "description": "A property listed by a host",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "city": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "rooms": { "type": "number" },
+        "bathrooms": { "type": "number" }
+      },
+      "required": ["id", "name", "address", "city"]
+    },
+    "Professional": {
+      "title": "Professional",
+      "description": "A cleaner professional",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "document": { "type": "string" },
+        "region": { "type": "string" },
+        "pixKey": { "type": "string" },
+        "score": { "type": "number" },
+        "rating": { "type": "number" },
+        "totalServices": { "type": "number" },
+        "availability": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "priceStandard": { "type": "number" },
+        "priceExpress": { "type": "number" },
+        "distanceKm": { "type": "number" },
+        "isSuperCleaner": { "type": "boolean" },
+        "isApproved": { "type": "boolean" }
+      },
+      "required": ["id", "name", "region"]
+    },
+    "SupportProfessional": {
+      "title": "SupportProfessional",
+      "description": "A maintenance/support professional",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "phone": { "type": "string" },
+        "region": { "type": "string" },
+        "availability": { "type": "string" },
+        "rating": { "type": "number" },
+        "completedJobs": { "type": "number" },
+        "pixKey": { "type": "string" },
+        "estimatedPriceRange": { "type": "string" },
+        "logoColor": { "type": "string" }
+      },
+      "required": ["id", "name", "category", "region"]
+    },
+    "SupportJob": {
+      "title": "SupportJob",
+      "description": "Maintenance job requested by a host",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "professionalId": { "type": "string" },
+        "hostId": { "type": "string" },
+        "category": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "description": { "type": "string" },
+        "quotedValue": { "type": "number" },
+        "status": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "hostId", "propertyId", "category"]
+    },
+    "CleaningRequest": {
+      "title": "CleaningRequest",
+      "description": "A booking request for a property cleaning",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "propertyName": { "type": "string" },
+        "propertyAddress: ": { "type": "string" },
+        "type": { "type": "string" },
+        "dateTime": { "type": "string" },
+        "observations": { "type": "string" },
+        "status": { "type": "string" },
+        "professionalId": { "type": "string" },
+        "professionalName": { "type": "string" },
+        "professionalPhoto": { "type": "string" },
+        "price": { "type": "number" },
+        "appFee": { "type": "number" },
+        "netValue": { "type": "number" },
+        "beforePhotos": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "afterPhotos": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "checklist": {
+          "type": "object"
+        },
+        "review": {
+          "type": "object"
+        }
+      },
+      "required": ["id", "propertyId", "type", "dateTime", "status"]
+    },
+    "FinanceSettings": {
+      "title": "FinanceSettings",
+      "description": "System-wide finance and tax settings",
+      "type": "object",
+      "properties": {
+        "pixKey": { "type": "string" },
+        "standardTax": { "type": "number" },
+        "loyaltyTax": { "type": "number" },
+        "recipientAccount": { "type": "string" },
+        "autoRepassActive": { "type": "boolean" }
+      },
+      "required": ["pixKey", "standardTax", "loyaltyTax"]
+    },
+    "FinanceLog": {
+      "title": "FinanceLog",
+      "description": "Logging of transactions/fees in the system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "dateTime": { "type": "string" },
+        "user": { "type": "string" },
+        "action": { "type": "string" },
+        "value": { "type": "number" },
+        "taxApplied": { "type": "number" },
+        "recipient": { "type": "string" }
+      },
+      "required": ["id", "dateTime", "action", "value"]
+    }
+  },
+  "firestore": {
+    "/registeredUsers/{userId}": {
+      "schema": "User",
+      "description": "Users that are registered in the system"
+    },
+    "/properties/{propertyId}": {
+      "schema": "Property",
+      "description": "Properties registered by hosts and clientes"
+    },
+    "/professionals/{professionalId}": {
+      "schema": "Professional",
+      "description": "Cleaners listings"
+    },
+    "/supportProfessionals/{supId}": {
+      "schema": "SupportProfessional",
+      "description": "Maintenance providers listings"
+    },
+    "/supportJobs/{jobId}": {
+      "schema": "SupportJob",
+      "description": "Allocated support jobs"
+    },
+    "/requests/{requestId}": {
+      "schema": "CleaningRequest",
+      "description": "Cleaning requests created by hosts"
+    },
+    "/financeSettings/{settingsId}": {
+      "schema": "FinanceSettings",
+      "description": "A single document representing standard taxes and configurations"
+    },
+    "/financeLogs/{logId}": {
+      "schema": "FinanceLog",
+      "description": "Historical transactional logging"
+    }
+  }
+}
