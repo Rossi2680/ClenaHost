@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   Users, AlertCircle, Ban, Search, Check, Calendar, MapPin, XCircle, 
-  TrendingUp, DollarSign, Briefcase, Percent, BarChart3, Award, Users2
+  TrendingUp, DollarSign, Briefcase, Percent, BarChart3, Award, Users2,
+  Edit3, Save, Printer, ArrowRight, ShieldCheck, Download
 } from 'lucide-react';
 import { Professional, CleaningRequest, SupportJob, RequestStatus } from '../types';
 
@@ -17,16 +18,31 @@ interface AdminSectionProps {
   financeSettings?: any;
   onChangeFinanceSettings?: (settings: any) => void;
   financeLogs?: any[];
+  onOpenReceipt?: (req: CleaningRequest) => void;
+  onUpdateSupportJob?: (jobId: string, updates: Partial<SupportJob>) => void;
 }
 
 export default function AdminSection({
   registeredUsers = [],
   requests = [],
   supportJobs = [],
-  onUpdateRegisteredUserStatus
+  professionals = [],
+  onUpdateRegisteredUserStatus,
+  onUpdateRequest,
+  onUpdateCleanerInfo,
+  onAddProfessional,
+  financeSettings = { pixKey: '28284920875', standardTax: 12, loyaltyTax: 5, recipientAccount: 'CleanHost Hold S.A. - Banco Cora IP' },
+  onChangeFinanceSettings,
+  financeLogs = [],
+  onOpenReceipt,
+  onUpdateSupportJob
 }: AdminSectionProps) {
   // Navigation Tabs at the top level of Admin Panel
-  const [adminTab, setAdminTab] = useState<'dashboard' | 'users'>('dashboard');
+  const [adminTab, setAdminTab] = useState<'dashboard' | 'users' | 'finance'>('dashboard');
+  
+  // Temporary edit state for CleanHost Pix Key
+  const [editingCompanyPix, setEditingCompanyPix] = useState(false);
+  const [tempPixKey, setTempPixKey] = useState(financeSettings.pixKey || '28284920875');
   
   // States related to "Usuários Cadastrados" Management
   const [activeTab, setActiveTab] = useState<'host_client' | 'cleaner' | 'support'>('host_client');
@@ -311,7 +327,7 @@ export default function AdminSection({
             id="tab-exec-dashboard"
           >
             <TrendingUp className="w-4 h-4" />
-            Controladoria & Dashboard
+            Controladoria &amp; Dashboard
           </button>
           
           <button
@@ -325,6 +341,19 @@ export default function AdminSection({
           >
             <Users className="w-4 h-4" />
             Usuários Cadastrados
+          </button>
+
+          <button
+            onClick={() => setAdminTab('finance')}
+            className={`cursor-pointer px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+              adminTab === 'finance'
+                ? 'bg-[#0A66FF] text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+            id="tab-exec-finance"
+          >
+            <DollarSign className="w-4 h-4" />
+            Controle Financeiro
           </button>
         </div>
       </div>
@@ -897,6 +926,430 @@ export default function AdminSection({
             )}
           </div>
 
+        </div>
+      )}
+
+      {adminTab === 'finance' && (
+        <div className="space-y-6" id="finance-section-container">
+          
+          {/* PIX KEY CONFIGURATION FOR CLEANHOST */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-3xs space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b">
+              <div>
+                <h3 className="font-bold text-sm text-[#0B1F33] uppercase flex items-center gap-1.5 font-display tracking-tight">
+                  <ShieldCheck className="w-4 h-4 text-[#12D6C5]" />
+                  Configuração Pix da Plataforma CleanHost
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Chave Pix cadastrada para o recebimento integral das operações. Esta rota abastece o caixa CleanHost para os repasses manuais subsequentes.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-50 border rounded-2xl gap-4">
+              <div className="space-y-1">
+                <span className="text-[8px] text-slate-400 uppercase font-black font-mono block">Chave Pix Ativa</span>
+                {editingCompanyPix ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <input 
+                      type="text"
+                      className="px-3 py-1.5 bg-white border rounded-xl text-xs font-mono font-bold text-[#0B1F33] outline-hidden focus:ring-1 focus:ring-blue-500 w-64"
+                      value={tempPixKey}
+                      onChange={(e) => setTempPixKey(e.target.value)}
+                    />
+                    <button
+                      onClick={() => {
+                        if (onChangeFinanceSettings) {
+                          onChangeFinanceSettings({
+                            ...financeSettings,
+                            pixKey: tempPixKey
+                          });
+                        }
+                        setEditingCompanyPix(false);
+                        alert('Chave Pix CleanHost cadastrada com sucesso!');
+                      }}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-2xs rounded-xl flex items-center gap-1 cursor-pointer"
+                    >
+                      <Save className="w-3.5 h-3.5" /> Salvar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTempPixKey(financeSettings.pixKey || '28284920875');
+                        setEditingCompanyPix(false);
+                      }}
+                      className="px-3 py-1.5 bg-slate-200 text-slate-700 text-2xs font-bold rounded-xl cursor-pointer hover:bg-slate-350"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-black text-[#0B1F33] text-sm">{financeSettings.pixKey || '28284920875'}</span>
+                    <span className="text-[10px] text-gray-400 font-medium font-sans">({financeSettings.recipientAccount || 'CleanHost Hold S.A.'})</span>
+                  </div>
+                )}
+              </div>
+
+              {!editingCompanyPix && (
+                <button
+                  onClick={() => setEditingCompanyPix(true)}
+                  className="px-4 py-2 bg-[#0a66ff]/10 hover:bg-[#0a66ff]/15 text-[#0a66ff] font-bold text-xs rounded-xl transition-all flex items-center gap-1 border border-blue-100 cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  Alterar Chave Pix
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* CONTROLE FINANCEIRO - CENTRAL OPERATIONS TRACKING */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-3xs space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b">
+              <div>
+                <h3 className="font-bold text-lg text-[#0B1F33] flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></span>
+                  Mesa de Controle Financeiro &amp; Repasses Manuais
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Registre as transferências, confira os dados Pix do parceiro e selecione &quot;Confirmar Repasse&quot; para fechar o ciclo do serviço.
+                </p>
+              </div>
+            </div>
+
+            {/* FINANCIAL OPERATIONS LIST */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-sans min-w-[1000px] border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[10px] uppercase font-bold text-slate-450 tracking-wider">
+                    <th className="py-3 px-4 font-black">Operação</th>
+                    <th className="py-3 px-4 font-black">Categoria</th>
+                    <th className="py-3 px-4 font-black">Cliente / Anfitrião</th>
+                    <th className="py-3 px-4 font-black">Profissional Parceira</th>
+                    <th className="py-3 px-4 font-black">Valores (Bruto | Taxa | Líquido)</th>
+                    <th className="py-3 px-4 font-black">Status do Pagamento</th>
+                    <th className="py-3 px-4 font-black">Instruções de Repasse</th>
+                    <th className="py-3 text-center px-4 font-black">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 font-bold text-slate-700">
+                  {/* Map Cleaning Requests first */}
+                  {safeRequests.map((req) => {
+                    const prof = professionals.find(p => p.id === req.professionalId);
+                    const profName = req.professionalName || prof?.name || 'Buscando Profissional';
+                    const profBank = prof?.bank || 'Não Inf.';
+                    const profPix = req.professionalId ? (prof?.pixKey || 'Não Cadastrada') : 'Aguardando Atribuição';
+                    const hasCleaner = !!req.professionalId;
+
+                    // Compute automatic tax fields (12% standard unless loyalty reduces it to 5%)
+                    const grossValue = req.price;
+                    const taxRate = req.appFee !== undefined ? req.appFee : grossValue * 0.12;
+                    const netValue = req.netValue !== undefined ? req.netValue : (grossValue - taxRate);
+
+                    // Operation statuses: Default to standard mappings if empty
+                    const rawStatus = req.financialStatus || 
+                      (req.status === RequestStatus.COMPLETED ? 'REPASSE PENDENTE' : 'AGUARDANDO PAGAMENTO');
+
+                    return (
+                      <tr key={`req-fin-${req.id}`} className="hover:bg-slate-50/50 transition-colors">
+                        {/* ID */}
+                        <td className="py-4 px-4">
+                          <div className="space-y-0.5">
+                            <span className="font-mono text-[#0B1F33] text-2xs block font-black">#{req.id.slice(0, 8).toUpperCase()}</span>
+                            <span className="text-[9px] text-[#0A66FF] bg-blue-50 px-1.5 py-0.5 rounded uppercase font-black uppercase tracking-wider">Faxina</span>
+                          </div>
+                        </td>
+
+                        {/* Category */}
+                        <td className="py-4 px-4 text-slate-600 font-bold">
+                          {req.type}
+                        </td>
+
+                        {/* Client */}
+                        <td className="py-4 px-4 font-bold text-[#0B1F33]">
+                          {req.propertyName}
+                          <p className="text-[10px] text-gray-400 font-medium mt-0.5">{req.propertyAddress}</p>
+                        </td>
+
+                        {/* Professional */}
+                        <td className="py-4 px-4 font-semibold text-2xs">
+                          {hasCleaner ? (
+                            <div className="space-y-1">
+                              <span className="text-[#0B1F33] font-bold block">{profName}</span>
+                              <div className="text-[10px] text-gray-500 space-y-0.5">
+                                <p className="font-medium">Chave Pix: <span className="font-mono text-slate-700 font-bold">{profPix}</span></p>
+                                <p className="font-medium">Banco: <span className="text-slate-700 font-bold">{profBank}</span></p>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-amber-605 italic text-slate-400 font-medium">Aguardando aceitação</span>
+                          )}
+                        </td>
+
+                        {/* Values */}
+                        <td className="py-4 px-4 font-mono font-black text-2xs">
+                          <div className="space-y-1">
+                            <div className="text-[#0B1F33]">Bruto: <span className="text-sm">R$ {grossValue.toFixed(2)}</span></div>
+                            <div className="text-rose-600 text-[10px]">Taxa: - R$ {taxRate.toFixed(2)} ({req.appFee === grossValue * 0.05 ? '5%' : '12%'})</div>
+                            <div className="text-emerald-600">Líquido Cleaner: R$ {netValue.toFixed(2)}</div>
+                          </div>
+                        </td>
+
+                        {/* Payment Status (Client -> CleanHost) */}
+                        <td className="py-4 px-4">
+                          {(() => {
+                            if (rawStatus === 'AGUARDANDO PAGAMENTO') {
+                              return <span className="px-2 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-[10px] uppercase block text-center font-bold">Aguardando Pgto</span>;
+                            } else if (rawStatus === 'PAGAMENTO INFORMADO') {
+                              return <span className="px-2 py-1 bg-blue-50 text-blue-800 border border-blue-200 rounded-lg text-[10px] uppercase block text-center font-bold animate-pulse">Comprovante Enviado</span>;
+                            } else {
+                              return <span className="px-2 py-1 bg-emerald-50 text-emerald-850 border border-emerald-250 rounded-lg text-[10px] uppercase block text-center font-bold">Pago &amp; Confirmado</span>;
+                            }
+                          })()}
+                        </td>
+
+                        {/* Repasse Status (CleanHost -> Professional) */}
+                        <td className="py-4 px-4 text-2xs">
+                          {(() => {
+                            if (rawStatus === 'FINALIZADO' || rawStatus === 'REPASSE REALIZADO') {
+                              const stamp = req.transferInfo;
+                              return (
+                                <div className="space-y-1 bg-slate-50 p-2 rounded-xl text-slate-600 font-medium">
+                                  <span className="text-emerald-700 font-bold uppercase block text-[9px]">✓ Repassado via Pix</span>
+                                  <p className="text-[10px] font-mono leading-normal">Data: <span className="text-slate-800 font-bold">{stamp?.transferDate || formatDate(new Date())}</span></p>
+                                  <p className="text-[10px] font-mono leading-normal">Hora: <span className="text-slate-800 font-bold">{stamp?.transferTime || '14:22'}</span></p>
+                                  <p className="text-[9px] truncate">Admin: <span className="text-slate-800 font-bold">{stamp?.adminResponsible || 'Auditor HQ'}</span></p>
+                                </div>
+                              );
+                            } else if (req.status === RequestStatus.COMPLETED) {
+                              return (
+                                <div className="space-y-1">
+                                  <span className="px-2 py-1 bg-rose-50 text-rose-800 border border-rose-200 rounded-lg text-[10px] uppercase block text-center font-bold">Repasse Pendente</span>
+                                  <p className="text-[10px] text-gray-400 text-center font-medium mt-1">Serviço concluído pelo profissional.</p>
+                                </div>
+                              );
+                            } else {
+                              return <span className="px-2 py-1 bg-slate-50 text-slate-500 rounded-lg text-[10px] uppercase block text-center font-bold">Aguardando Término</span>;
+                            }
+                          })()}
+                        </td>
+
+                        {/* Action buttons */}
+                        <td className="py-4 px-4 text-center">
+                          <div className="flex flex-col gap-1 w-32 mx-auto justify-center">
+                            {/* Action 1: Confirm Payment Received from Host */}
+                            {rawStatus === 'PAGAMENTO INFORMADO' && (
+                              <button
+                                onClick={() => {
+                                  onUpdateRequest(req.id, { 
+                                    financialStatus: 'PAGAMENTO CONFIRMADO',
+                                    status: RequestStatus.ASSIGNED // unlock the service so cleaner can start commuting
+                                  });
+                                  alert('Pagamento aprovado! O profissional já foi notificado para dar início à faxina.');
+                                }}
+                                className="cursor-pointer w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-xl flex items-center justify-center gap-1 uppercase"
+                              >
+                                <Check className="w-3 h-3" /> Confirmar Pgto
+                              </button>
+                            )}
+
+                            {/* Action 2: Trigger Manual Payout Transfer to professional */}
+                            {(req.status === RequestStatus.COMPLETED && rawStatus !== 'FINALIZADO' && rawStatus !== 'REPASSE REALIZADO') && (
+                              <button
+                                onClick={() => {
+                                  const confirmRepasse = confirm(`Você realizou o Pix MANUAL de R$ ${netValue.toFixed(2)} para ${profName}?\n\nChave Pix: ${profPix}\nBanco: ${profBank}`);
+                                  if (confirmRepasse) {
+                                    onUpdateRequest(req.id, {
+                                      financialStatus: 'FINALIZADO',
+                                      transferInfo: {
+                                        transferDate: new Date().toLocaleDateString('pt-BR'),
+                                        transferTime: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                                        adminResponsible: 'Membro Admin HQ Sócio'
+                                      }
+                                    });
+                                    alert('Repasse financeiro lançado com sucesso! Histórico devidamente documentado.');
+                                  }
+                                }}
+                                className="cursor-pointer w-full py-2 bg-[#0A66FF] hover:bg-blue-600 text-white font-bold text-[10px] rounded-xl flex items-center justify-center gap-1 uppercase"
+                              >
+                                <DollarSign className="w-3 h-3" /> Liberar Repasse
+                              </button>
+                            )}
+
+                            {/* Option 3: View automated printable receipt PDF */}
+                            {(req.status === RequestStatus.COMPLETED || rawStatus === 'FINALIZADO') && onOpenReceipt && (
+                              <button
+                                onClick={() => onOpenReceipt(req)}
+                                className="cursor-pointer w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[10px] rounded-xl flex items-center justify-center gap-1"
+                              >
+                                <Printer className="w-3 h-3" /> Ver Recibo
+                              </button>
+                            )}
+
+                            {rawStatus !== 'PAGAMENTO INFORMADO' && !(req.status === RequestStatus.COMPLETED) && (
+                              <span className="text-[10px] text-gray-405 italic text-gray-400 font-medium">Fluxo operacional ativo</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Map Support Jobs next (Rede de Apoio) */}
+                  {safeSupportJobs.map((job) => {
+                    const prov = registeredUsers.find(u => u.id === job.professionalId);
+                    const provName = prov?.name || 'Profissional de Suporte';
+                    const provBank = prov?.bank || 'Não Cadastrado';
+                    const provPix = prov?.pixKey || 'Não Cadastrada';
+
+                    const grossValue = job.quotedValue;
+                    const taxRate = grossValue * 0.05; // 5% flat fee for Rede de Apoio
+                    const netValue = grossValue - taxRate;
+
+                    const rawStatus = job.financialStatus || 
+                      (job.status === 'Concluído' ? 'REPASSE PENDENTE' : 'AGUARDANDO PAGAMENTO');
+
+                    return (
+                      <tr key={`job-fin-${job.id}`} className="hover:bg-slate-50/50 transition-colors">
+                        {/* ID */}
+                        <td className="py-4 px-4">
+                          <div className="space-y-0.5">
+                            <span className="font-mono text-[#0B1F33] text-2xs block font-black">#{job.id.slice(0, 8).toUpperCase()}</span>
+                            <span className="text-[9px] text-[#4338CA] bg-indigo-50 px-1.5 py-0.5 rounded uppercase font-black uppercase tracking-wider">Apoio</span>
+                          </div>
+                        </td>
+
+                        {/* Category */}
+                        <td className="py-4 px-4 text-slate-600 font-bold">
+                          {job.category}
+                        </td>
+
+                        {/* Client */}
+                        <td className="py-4 px-4 font-bold text-[#0B1F33]">
+                          Imóvel #{job.propertyId.slice(0, 5)}
+                          <p className="text-[10px] text-gray-400 font-medium mt-0.5">Visita cadastrada</p>
+                        </td>
+
+                        {/* Professional */}
+                        <td className="py-4 px-4 font-semibold text-2xs">
+                          <div className="space-y-1">
+                            <span className="text-[#0B1F33] font-bold block">{provName}</span>
+                            <div className="text-[10px] text-gray-500 space-y-0.5">
+                              <p className="font-medium">Chave Pix: <span className="font-mono text-slate-700 font-bold">{provPix}</span></p>
+                              <p className="font-medium">Banco: <span className="text-slate-700 font-bold">{provBank}</span></p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Values */}
+                        <td className="py-4 px-4 font-mono font-black text-2xs">
+                          <div className="space-y-1">
+                            <div className="text-[#0B1F33]">Bruto: <span className="text-sm">R$ {grossValue.toFixed(2)}</span></div>
+                            <div className="text-rose-600 text-[10px]">Taxa CleanHost (5%): - R$ {taxRate.toFixed(2)}</div>
+                            <div className="text-emerald-600">Líquido Apoio: R$ {netValue.toFixed(2)}</div>
+                          </div>
+                        </td>
+
+                        {/* Payment Status (Client -> CleanHost) */}
+                        <td className="py-4 px-4">
+                          {(() => {
+                            if (rawStatus === 'AGUARDANDO PAGAMENTO') {
+                              return <span className="px-2 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-[10px] uppercase block text-center font-bold">Aguardando Pgto</span>;
+                            } else if (rawStatus === 'PAGAMENTO INFORMADO') {
+                              return <span className="px-2 py-1 bg-blue-50 text-blue-800 border border-blue-200 rounded-lg text-[10px] uppercase block text-center font-bold animate-pulse">Comprovante Enviado</span>;
+                            } else {
+                              return <span className="px-2 py-1 bg-emerald-50 text-emerald-850 border border-emerald-250 rounded-lg text-[10px] uppercase block text-center font-bold">Pago &amp; Confirmado</span>;
+                            }
+                          })()}
+                        </td>
+
+                        {/* Repasse Status (CleanHost -> Professional) */}
+                        <td className="py-4 px-4 text-2xs">
+                          {(() => {
+                            if (rawStatus === 'FINALIZADO' || rawStatus === 'REPASSE REALIZADO') {
+                              const stamp = job.transferInfo;
+                              return (
+                                <div className="space-y-1 bg-slate-50 p-2 rounded-xl text-slate-600 font-medium">
+                                  <span className="text-emerald-700 font-bold uppercase block text-[9px]">✓ Repassado via Pix</span>
+                                  <p className="text-[10px] font-mono leading-normal">Data: <span className="text-slate-800 font-bold">{stamp?.transferDate || formatDate(new Date())}</span></p>
+                                  <p className="text-[10px] font-mono leading-normal">Hora: <span className="text-slate-800 font-bold">{stamp?.transferTime || '14:22'}</span></p>
+                                  <p className="text-[9px] truncate">Admin: <span className="text-slate-800 font-bold">{stamp?.adminResponsible || 'Auditor HQ'}</span></p>
+                                </div>
+                              );
+                            } else if (job.status === 'Concluído') {
+                              return (
+                                <div className="space-y-1">
+                                  <span className="px-2 py-1 bg-rose-50 text-rose-800 border border-rose-200 rounded-lg text-[10px] uppercase block text-center font-bold">Repasse Pendente</span>
+                                  <p className="text-[10px] text-gray-400 text-center font-medium mt-1">Trabalho concluído.</p>
+                                </div>
+                              );
+                            } else {
+                              return <span className="px-2 py-1 bg-slate-50 text-slate-500 rounded-lg text-[10px] uppercase block text-center font-bold">Aguardando Término</span>;
+                            }
+                          })()}
+                        </td>
+
+                        {/* Action buttons */}
+                        <td className="py-4 px-4 text-center">
+                          <div className="flex flex-col gap-1 w-32 mx-auto justify-center">
+                            {/* Action 1: Confirm Payment Received from Host */}
+                            {rawStatus === 'PAGAMENTO INFORMADO' && onUpdateSupportJob && (
+                              <button
+                                onClick={() => {
+                                  onUpdateSupportJob(job.id, { 
+                                    financialStatus: 'PAGAMENTO CONFIRMADO',
+                                    status: 'Aceito' // unlock job execution
+                                  });
+                                  alert('Pagamento aprovado! O prestador da Rede de Apoio já foi autorizado a executar o reparo.');
+                                }}
+                                className="cursor-pointer w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-xl flex items-center justify-center gap-1 uppercase"
+                              >
+                                <Check className="w-3 h-3" /> Confirmar Pgto
+                              </button>
+                            )}
+
+                            {/* Action 2: Trigger Manual Payout Transfer to support professional */}
+                            {(job.status === 'Concluído' && rawStatus !== 'FINALIZADO' && rawStatus !== 'REPASSE REALIZADO') && onUpdateSupportJob && (
+                              <button
+                                onClick={() => {
+                                  const confirmRepasse = confirm(`Você realizou o Pix MANUAL de R$ ${netValue.toFixed(2)} para o prestador ${provName}?\n\nChave Pix: ${provPix}\nBanco: ${provBank}`);
+                                  if (confirmRepasse) {
+                                    onUpdateSupportJob(job.id, {
+                                      financialStatus: 'FINALIZADO',
+                                      transferInfo: {
+                                        transferDate: new Date().toLocaleDateString('pt-BR'),
+                                        transferTime: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                                        adminResponsible: 'Membro Admin HQ Sócio'
+                                      }
+                                    });
+                                    alert('Repasse financeiro do parceiro de suporte lançado com sucesso.');
+                                  }
+                                }}
+                                className="cursor-pointer w-full py-2 bg-[#0A66FF] hover:bg-blue-600 text-white font-bold text-[10px] rounded-xl flex items-center justify-center gap-1 uppercase"
+                              >
+                                <DollarSign className="w-3 h-3" /> Liberar Repasse
+                              </button>
+                            )}
+
+                            {rawStatus !== 'PAGAMENTO INFORMADO' && !(job.status === 'Concluído') && (
+                              <span className="text-[10px] text-gray-405 italic text-gray-400 font-medium">Fluxo de apoio ativo</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {(safeRequests.length === 0 && safeSupportJobs.length === 0) && (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-slate-400 italic">
+                        Nenhuma operação financeira registrada na plataforma no momento.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 

@@ -36,6 +36,7 @@ export default function SupportSection({
   const [newProvPhone, setNewProvPhone] = useState('');
   const [newProvRegion, setNewProvRegion] = useState('');
   const [newProvPix, setNewProvPix] = useState('');
+  const [newProvBank, setNewProvBank] = useState('');
   const [newProvPriceRange, setNewProvPriceRange] = useState('R$ 100 - R$ 250');
 
   // Submit Quote State for Tech role
@@ -78,8 +79,8 @@ export default function SupportSection({
 
   const handleRegisterProvider = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProvName || !newProvPhone || !newProvRegion || !newProvPix) {
-      alert('Por favor, preencha todos os campos do cadastro profissional.');
+    if (!newProvName || !newProvPhone || !newProvRegion || !newProvPix || !newProvBank) {
+      alert('Por favor, preencha todos os campos do cadastro profissional, incluindo dados bancários.');
       return;
     }
 
@@ -93,6 +94,7 @@ export default function SupportSection({
       rating: 5.0,
       completedJobs: 0,
       pixKey: newProvPix,
+      bank: newProvBank,
       estimatedPriceRange: newProvPriceRange,
       logoColor: 'bg-[#12D6C5]/10 text-[#0b1f33]'
     };
@@ -103,6 +105,7 @@ export default function SupportSection({
     setNewProvPhone('');
     setNewProvRegion('');
     setNewProvPix('');
+    setNewProvBank('');
     setActiveTab('directory');
   };
 
@@ -508,6 +511,18 @@ export default function SupportSection({
                 placeholder="Ex: Zona Norte e Oeste de São Paulo"
                 value={newProvRegion}
                 onChange={(e) => setNewProvRegion(e.target.value)}
+                className="w-full text-xs px-3 py-2 border rounded-xl outline-hidden"
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-600">Banco para Depósitos / Repasses Pix</label>
+              <input 
+                type="text"
+                placeholder="Ex: Nubank, Itaú, Banco Cora"
+                value={newProvBank}
+                onChange={(e) => setNewProvBank(e.target.value)}
                 className="w-full text-xs px-3 py-2 border rounded-xl outline-hidden"
                 required
               />

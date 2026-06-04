@@ -36,6 +36,7 @@ export interface Professional {
   document: string;
   region: string;
   pixKey: string;
+  bank?: string;
   score: number; // CleanHost Score (0-100)
   rating: number; // 1-5 stars
   totalServices: number; // For loyalty system
@@ -57,6 +58,7 @@ export interface SupportProfessional {
   rating: number;
   completedJobs: number;
   pixKey: string;
+  bank?: string;
   estimatedPriceRange: string;
   logoColor: string;
 }
@@ -71,6 +73,12 @@ export interface SupportJob {
   quotedValue: number;
   status: 'Solicitado' | 'Orçado' | 'Aceito' | 'Concluído';
   date: string;
+  financialStatus?: string;
+  transferInfo?: {
+    transferDate: string;
+    transferTime: string;
+    adminResponsible: string;
+  };
 }
 
 export interface CleaningRequest {
@@ -106,6 +114,12 @@ export interface CleaningRequest {
     communication: number;
     comment: string;
     date: string;
+  };
+  financialStatus?: string;
+  transferInfo?: {
+    transferDate: string;
+    transferTime: string;
+    adminResponsible: string;
   };
 }
 

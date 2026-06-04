@@ -24,6 +24,8 @@ export default function CleanerSection({
   const [editingPix, setEditingPix] = useState(false);
   const [editedPixKey, setEditedPixKey] = useState(currentCleaner?.pixKey || '');
   const [editedRegion, setEditedRegion] = useState(currentCleaner?.region || '');
+  const [editedBank, setEditedBank] = useState(currentCleaner?.bank || 'Banco Cora');
+  const [editedTitularName, setEditedTitularName] = useState(currentCleaner?.name || '');
   const [financeView, setFinanceView] = useState<'monthly' | 'detailed'>('monthly');
 
   if (!currentCleaner) {
@@ -61,10 +63,12 @@ export default function CleanerSection({
   const handleSaveProfile = () => {
     onUpdateCleanerInfo(currentCleaner.id, {
       pixKey: editedPixKey,
-      region: editedRegion
+      region: editedRegion,
+      bank: editedBank,
+      name: editedTitularName
     });
     setEditingPix(false);
-    alert('Informações de perfil salvas com sucesso!');
+    alert('Informações de perfil e dados para recebimento de Pix salvos!');
   };
 
   const myRequests = requests.filter(r => r.professionalId === currentCleaner.id);
@@ -515,6 +519,27 @@ export default function CleanerSection({
                 </div>
                 
                 <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-500">Nome do Titular Conta Pix</label>
+                  <input 
+                    type="text"
+                    value={editedTitularName}
+                    onChange={(e) => setEditedTitularName(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border rounded-xl outline-hidden focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-500">Banco</label>
+                  <input 
+                    type="text"
+                    value={editedBank}
+                    onChange={(e) => setEditedBank(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border rounded-xl outline-hidden focus:ring-1 focus:ring-blue-500"
+                    placeholder="Ex: Itaú, Nubank, Banco do Brasil..."
+                  />
+                </div>
+
+                <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-500">Chave Pix de Recebimento</label>
                   <input 
                     type="text"
@@ -534,6 +559,14 @@ export default function CleanerSection({
               </div>
             ) : (
               <div className="space-y-3 bg-[#F4F7FA]/75 p-3 rounded-2xl text-xs text-[#0B1F33]">
+                <div>
+                  <span className="text-gray-400 text-[10px] block font-semibold uppercase">Titular da Conta</span>
+                  <span className="font-bold block truncate mt-0.5">{currentCleaner.name}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 text-[10px] block font-semibold uppercase">Banco da Conta</span>
+                  <span className="font-bold block truncate mt-0.5">{currentCleaner.bank || 'Não informado'}</span>
+                </div>
                 <div>
                   <span className="text-gray-400 text-[10px] block font-semibold uppercase">Sua Chave Pix</span>
                   <span className="font-mono font-bold font-semibold block truncate mt-0.5">{currentCleaner.pixKey}</span>

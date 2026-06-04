@@ -33,6 +33,7 @@ export default function HostSection({
 }: HostSectionProps) {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'request' | 'properties' | 'tracker'>('dashboard');
   const [selectedRequestIdForTracker, setSelectedRequestIdForTracker] = useState<string | null>(null);
+  const [payingRequestId, setPayingRequestId] = useState<string | null>(null);
   
   // New Property Form State
   const [showAddPropertyModal, setShowAddPropertyModal] = useState(false);
@@ -170,7 +171,8 @@ export default function HostSection({
       type: wizType,
       dateTime: `${wizDate}T${wizTime}:00.000Z`,
       observations: wizObservations,
-      status: RequestStatus.ASSIGNED,
+      status: RequestStatus.PENDING, // starts as pending payment approval
+      financialStatus: 'AGUARDANDO PAGAMENTO',
       professionalId: selectedProf.id,
       professionalName: selectedProf.name,
       professionalPhoto: selectedProf.photoUrl,
@@ -203,14 +205,10 @@ export default function HostSection({
     }
 
     onAddRequest(newReq);
+    setPayingRequestId(newReq.id);
     setSelectedRequestIdForTracker(newReq.id);
-    setActiveTab('tracker');
+    setActiveTab('dashboard'); // take them back to their overview where active operations are listed
     setWizardStep(1);
-    
-    // Trigger simulated cleaner notification & arrival sequence
-    setTimeout(() => {
-      onUpdateRequest(newReq.id, { status: RequestStatus.EN_ROUTE });
-    }, 5000);
   };
 
   const handleSendChat = (e: React.FormEvent) => {
@@ -454,16 +452,30 @@ export default function HostSection({
                           >
                             Cancelar / Substituir
                           </button>
-                          <button
-                            onClick={() => {
-                              setSelectedRequestIdForTracker(req.id);
-                              setActiveTab('tracker');
-                            }}
-                            className="bg-[#0A66FF] hover:bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
-                          >
-                            <Play className="w-3 h-3 fill-white text-white" />
-                            Acompanhar
-                          </button>
+                          
+                          {(!req.financialStatus || req.financialStatus === 'AGUARDANDO PAGAMENTO') ? (
+                            <button
+                              onClick={() => setPayingRequestId(req.id)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                            >
+                              Pagar Pix
+                            </button>
+                          ) : req.financialStatus === 'PAGAMENTO INFORMADO' ? (
+                            <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-250 px-2 py-1 rounded-lg font-bold">
+                              Aguardando Admin
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setSelectedRequestIdForTracker(req.id);
+                                setActiveTab('tracker');
+                              }}
+                              className="bg-[#0A66FF] hover:bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                            >
+                              <Play className="w-3 h-3 fill-white text-white" />
+                              Acompanhar
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1268,6 +1280,131 @@ export default function HostSection({
 
         </div>
       )}
+
+      {/* PIX PAYMENT SCREEN MODAL */}
+      {payingRequestId && (() => {
+        const req = requests.find(r => r.id === payingRequestId);
+        if (!req) return null;
+
+        const isLoyalty = req.appFee === req.price * 0.05;
+        const ratePct = isLoyalty ? 5 : 12;
+        const pixPayload = `00020101021126360014br.gov.bcb.pix0114${financeSettings.pixKey || '28284920875'}5204000053039865405${req.price.toFixed(2)}5802BR5912CleanHost%20IP6009Sao%2520Paulo62070503***6304`;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xs font-sans animate-fade-in" id="pix-payment-screen-modal">
+            <div className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col justify-between">
+              
+              {/* Header */}
+              <div className="bg-[#0B1F33] text-white p-5 relative">
+                <button 
+                  onClick={() => setPayingRequestId(null)}
+                  className="absolute top-4 right-4 text-white/70 hover:text-white p-1 rounded-full bg-white/10"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <span className="text-[9px] uppercase font-bold tracking-widest text-[#12D6C5]">Plataforma Intermediadora</span>
+                <h3 className="text-base font-black tracking-tight mt-1">Checkout de Pagamento Garantido Pix</h3>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-5">
+                
+                {/* Financial Summary */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 text-xs text-[#0B1F33] space-y-2 font-medium">
+                  <div className="flex justify-between items-center text-gray-500">
+                    <span>Imóvel / Referência:</span>
+                    <span className="font-bold text-slate-800">{req.propertyName}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-gray-500">
+                    <span>Profissional Selecionada:</span>
+                    <span className="font-bold text-slate-800">{req.professionalName || 'Parceira'}</span>
+                  </div>
+                  <div className="border-t border-slate-200 my-2 pt-2"></div>
+                  
+                  <div className="flex justify-between items-center text-gray-500">
+                    <span>Valor do Serviço (Cleaner):</span>
+                    <span className="font-mono font-bold">R$ {req.price.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-rose-600">
+                    <span>Taxa CleanHost Retida ({ratePct}%):</span>
+                    <span className="font-mono font-bold">- R$ {req.appFee.toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="border-t border-slate-200 my-2 pt-2"></div>
+                  <div className="flex justify-between items-center text-[#0B1F33] font-black">
+                    <span className="text-sm">Total Garantia Pix a Depositar:</span>
+                    <span className="font-mono text-base text-emerald-600">R$ {req.price.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* QR CODE PATTERN MOCKUP */}
+                <div className="flex flex-col items-center space-y-2 py-2">
+                  <div className="p-3 bg-white border-2 border-slate-200 rounded-2xl shadow-sm">
+                    {/* Generates a stylized mock visual representation of QR matrix */}
+                    <div className="w-40 h-40 bg-slate-50 flex flex-wrap p-1 gap-1 justify-center items-center content-center rounded-lg">
+                      <div className="w-12 h-12 border-4 border-slate-900 m-1 bg-white flex justify-center items-center font-bold text-[8px]">Clean</div>
+                      <div className="w-10 h-10 bg-slate-900 rounded-sm"></div>
+                      <div className="w-12 h-12 bg-slate-900 rounded-sm"></div>
+                      <div className="w-10 h-10 border-4 border-slate-900 bg-white"></div>
+                      <div className="w-16 h-8 bg-slate-900 rounded-sm"></div>
+                      <div className="w-8 h-10 bg-slate-900 rounded-sm"></div>
+                      <div className="w-12 h-12 border-4 border-[#12D6C5] rounded bg-white flex justify-center items-center text-[8px] font-black text-[#0B1F33]">PIX</div>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider font-sans text-center">Escaneie o QR Code acima pelo app de seu banco</p>
+                </div>
+
+                {/* Copy paste button */}
+                <div className="space-y-1.5 text-center">
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Ou use o Pix Copia e Cola</span>
+                  <div className="flex gap-1.5 items-center bg-slate-55 bg-slate-100 p-2 rounded-xl border">
+                    <span className="text-[9px] text-slate-500 truncate text-left font-mono font-medium flex-1">{pixPayload}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(pixPayload);
+                        alert('Código Pix Copia e Cola copiado para sua área de transferência com sucesso!');
+                      }}
+                      className="px-2.5 py-1.5 bg-[#4338CA] hover:bg-opacity-95 text-white font-bold text-[9px] uppercase rounded-lg cursor-pointer shrink-0"
+                    >
+                      Copiar Código
+                    </button>
+                  </div>
+                  <p className="text-[9px] text-slate-400 font-medium leading-relaxed">Conta destino: <span className="text-slate-600 font-bold">{financeSettings.recipientAccount || 'CleanHost Holds S.A.'}</span> • Pix: <span className="font-mono text-slate-600 font-bold">{financeSettings.pixKey || '28284920875'}</span></p>
+                </div>
+
+                {/* Prompt instructions warning */}
+                <div className="bg-amber-50 text-amber-900 border border-amber-200 text-[10px] p-3 rounded-xl leading-relaxed font-bold">
+                  ⚠️ Após realizar o pagamento no app de seu banco, clique no botão azul abaixo <strong>&quot;Já realizei o pagamento&quot;</strong> para enviar a liberação ao administrativo de repasses da CleanHost.
+                </div>
+
+              </div>
+
+              {/* Footer Confirmation Actions */}
+              <div className="bg-slate-50 p-4 border-t flex gap-2">
+                <button
+                  onClick={() => setPayingRequestId(null)}
+                  className="flex-1 py-2.5 bg-slate-200 hover:bg-slate-350 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Voltar
+                </button>
+                <button
+                  onClick={() => {
+                    onUpdateRequest(req.id, { 
+                      financialStatus: 'PAGAMENTO INFORMADO'
+                    });
+                    setPayingRequestId(null);
+                    alert('Comprovante enviado! Aguarde enquanto nossa equipe de controle confere a compensação do Pix. O profissional será notificado imediatamente para início.');
+                  }}
+                  className="flex-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl cursor-pointer flex items-center justify-center gap-1 uppercase"
+                >
+                  <CheckCircle className="w-4 h-4" /> Já realizei o pagamento
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
