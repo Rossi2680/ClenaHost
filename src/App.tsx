@@ -921,22 +921,12 @@ export default function App() {
                   <button
                     onClick={() => setAdminViewMode('host')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      adminViewMode === 'host'
+                      adminViewMode === 'host' || adminViewMode === 'cliente'
                         ? 'bg-[#0A66FF] text-white shadow-sm'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    🏡 Como Anfitrião
-                  </button>
-                  <button
-                    onClick={() => setAdminViewMode('cliente')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      adminViewMode === 'cliente'
-                        ? 'bg-purple-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    👤 Como Cliente
+                    🏡 Como Anfitrião / Cliente
                   </button>
                   <button
                     onClick={() => setAdminViewMode('cleaner')}
@@ -998,7 +988,7 @@ export default function App() {
                 onOpenReceipt={(req) => setSelectedReceiptRequest(req)}
                 financeSettings={financeSettings}
                 onRecordFinanceLog={(log: any) => setFinanceLogs(prev => [log, ...prev])}
-                userName={loggedInUser?.role === 'ADMIN' && adminViewMode === 'cliente' ? 'Cliente Simulado' : (loggedInUser?.name || 'Anfitrião')}
+                userName={loggedInUser?.role === 'ADMIN' && (adminViewMode === 'host' || adminViewMode === 'cliente') ? 'Anfitrião / Cliente Simulado' : (loggedInUser?.name || 'Anfitrião / Cliente')}
               />
             )}
 

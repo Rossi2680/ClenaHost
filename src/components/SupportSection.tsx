@@ -183,8 +183,11 @@ export default function SupportSection({
           <div className="bg-[#0B1F33] text-white p-6 rounded-3xl relative overflow-hidden">
             <h3 className="text-xl font-bold tracking-tight">O que é a Rede de Apoio CleanHost?</h3>
             <p className="text-sm text-slate-300 mt-2 max-w-2xl leading-relaxed">
-              Centralizamos eletricistas, encanadores, pintores e chaveiros da sua região para resolver imprevistos operacionais rapidamente entre check-out e check-in. O profissional fecha o preço direto pelo app e a plataforma fica com 10% da intermediação (ou 5% na 11ª operação).
+              Tudo o que seu imóvel precisa em um só lugar. Eletricistas, encanadores, pintores e chaveiros disponíveis para resolver imprevistos com rapidez e segurança.
             </p>
+            <div className="mt-4 pt-3 border-t border-slate-700/50 text-[11px] text-[#12D6C5] font-mono">
+              Taxa de intermediação da Rede de Apoio: 5%.
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -184,15 +184,11 @@ export default function AuthScreen({
 
     const lowerEmail = loginEmail.toLowerCase();
 
-    // Sócio-Administrador bypass for Rossi or central admin address (to view control panel instantly)
-    if (
-      lowerEmail === 'rossiferrary@hotmail.com' ||
-      lowerEmail === 'cleanhost.oficial@gmail.com' ||
-      lowerEmail === 'admin@cleanhost.com'
-    ) {
+    // Sócio-Administrador bypass ONLY for the official database admin email
+    if (lowerEmail === 'cleanhost.oficial@gmail.com') {
       onLoginSuccess({
         id: 'admin-master',
-        name: lowerEmail === 'rossiferrary@hotmail.com' ? 'Rossi (Sócio-Administrador)' : 'Sócio-Administrador HQ',
+        name: 'Sócio-Administrador HQ',
         role: 'ADMIN',
         email: lowerEmail,
         extra: { isSuperAdmin: true }
@@ -342,51 +338,6 @@ export default function AuthScreen({
         });
       }, 1500);
 
-    } else if (selectedRegRole === 'CLIENTE') {
-      if (!hostPropAddress) {
-        setRegError('Por favor, digite seu endereço de residência completo.');
-        return;
-      }
-
-      const newProperty: Property = {
-        id: `prop-${Date.now()}`,
-        name: hostPropName || 'Minha Residência',
-        address: hostPropAddress,
-        city: hostPropCity,
-        imageUrl: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=600&q=80',
-        rooms: parseFloat(hostPropRooms) || 1,
-        bathrooms: parseFloat(hostPropBathrooms) || 1
-      };
-
-      // Add to main memory list
-      onAddProperty(newProperty);
-
-      onAddUser({
-        id: uniqueId,
-        name: regName,
-        email: regEmail,
-        role: 'CLIENTE',
-        password: regPassword,
-        phone: regPhone,
-        document: regDocument,
-        photoUrl: regPhoto,
-        city: regCity || hostPropCity || 'São Paulo',
-        createdAt: registrationDate,
-        isApproved: false,
-        approvalStatus: 'pending'
-      });
-
-      setRegSuccess(true);
-      setTimeout(() => {
-        onLoginSuccess({
-          id: uniqueId,
-          name: regName,
-          role: 'CLIENTE',
-          email: regEmail,
-          extra: { phone: regPhone, document: regDocument, photoUrl: regPhoto, propertyId: newProperty.id }
-        });
-      }, 1500);
-
     } else if (selectedRegRole === 'CLEANER') {
       if (!regRegion || !regPixKey || !cleanerPriceStd) {
         setRegError('Preencha seu endereço de atuação, chave Pix para repasses e valores padrão.');
@@ -505,10 +456,10 @@ export default function AuthScreen({
 
           <div className="space-y-3 pt-4">
             <h2 className="text-xl md:text-2xl font-black font-display tracking-tight text-white leading-tight">
-              A virada rápida perfeita para seu Airbnb
+              Profissionais confiáveis para manter seu imóvel sempre pronto.
             </h2>
             <p className="text-xs text-slate-300 leading-relaxed font-sans">
-              Segurança e alta pontuação com um ecossistema 100% focado em propriedades de locação por curta temporada.
+              Limpeza, manutenção e suporte rápido para anfitriões e proprietários.
             </p>
           </div>
         </div>
@@ -670,20 +621,13 @@ export default function AuthScreen({
                   {/* Primary Registration Role Switcher */}
                   <div className="space-y-1 pb-1">
                     <label className="text-[10px] uppercase font-bold text-slate-500 block">Qual sua modalidade de uso?</label>
-                    <div className="grid shadow-2xs grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    <div className="grid shadow-2xs grid-cols-3 gap-1.5">
                       <button
                         type="button"
                         onClick={() => { setSelectedRegRole('HOST'); setRegError(''); }}
                         className={`py-2 px-1 rounded-xl text-[10px] font-black transition-all cursor-pointer text-center ${selectedRegRole === 'HOST' ? 'bg-[#0A66FF] text-white shadow-xs' : 'bg-slate-50 border border-slate-200 text-slate-600'}`}
                       >
-                        🏠 Anfitrião
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setSelectedRegRole('CLIENTE'); setRegError(''); }}
-                        className={`py-2 px-1 rounded-xl text-[10px] font-black transition-all cursor-pointer text-center ${selectedRegRole === 'CLIENTE' ? 'bg-[#0A66FF] text-white shadow-xs' : 'bg-slate-50 border border-slate-200 text-slate-600'}`}
-                      >
-                        👤 Cliente
+                        🏠 Anfitrião / Cliente
                       </button>
                       <button
                         type="button"
@@ -691,7 +635,7 @@ export default function AuthScreen({
                         className={`py-2 px-1 rounded-xl text-[10px] font-black transition-all cursor-pointer text-center ${selectedRegRole === 'CLEANER' ? 'bg-[#0A66FF] text-white shadow-xs' : 'bg-slate-50 border border-slate-200 text-slate-600'}`}
                         title="Profissional de Limpeza"
                       >
-                        🧹 Faxina
+                        🧹 Cleaner / Faxina
                       </button>
                       <button
                         type="button"
@@ -699,7 +643,7 @@ export default function AuthScreen({
                         className={`py-2 px-1 rounded-xl text-[10px] font-black transition-all cursor-pointer text-center ${selectedRegRole === 'SUPPORT' ? 'bg-[#0A66FF] text-white shadow-xs' : 'bg-slate-50 border border-slate-200 text-slate-600'}`}
                         title="Rede de Apoio"
                       >
-                        🛠️ Apoio
+                        🛠️ Apoio Técnico
                       </button>
                     </div>
                   </div>
@@ -828,86 +772,13 @@ export default function AuthScreen({
 
                   {/* STEP 2: ROLE-SPECIFIC MANDATORY DETAILS */}
                   
-                  {/* CLIENTE PATH DETAILS */}
-                  {selectedRegRole === 'CLIENTE' && (
-                    <div className="space-y-3 bg-[#0A66FF]/5 p-4 rounded-2xl border border-blue-100">
-                      <span className="text-[10px] uppercase font-bold text-[#0A66FF] block tracking-wider">Passo 2: Seu Endereço de Residência (Para Localizar Profissionais)</span>
-                      
-                      <div className="space-y-1">
-                        <label className="text-[9px] uppercase font-bold text-slate-600 block">Apelido do Local (Ex: Minha Casa, Meu Escritório)</label>
-                        <input
-                          type="text"
-                          value={hostPropName}
-                          onChange={(e) => setHostPropName(e.target.value)}
-                          placeholder="Ex: Minha Residência"
-                          className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs outline-none"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[9px] uppercase font-bold text-slate-600 block">Endereço Completo</label>
-                        <input
-                          type="text"
-                          value={hostPropAddress}
-                          onChange={(e) => setHostPropAddress(e.target.value)}
-                          placeholder="Ex: Rua das Flores, 123 - Bairro Novo"
-                          className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs outline-none"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-[9px] uppercase font-bold text-slate-600 block">Cidade</label>
-                          <select
-                            value={hostPropCity}
-                            onChange={(e) => setHostPropCity(e.target.value)}
-                            className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs outline-none font-medium text-slate-700"
-                          >
-                            <option value="São Paulo">São Paulo</option>
-                            <option value="Guarujá">Guarujá</option>
-                            <option value="Rio de Janeiro">Rio de Janeiro</option>
-                            <option value="Campinas">Campinas</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-[9px] uppercase font-bold text-slate-600 block">Quartos</label>
-                          <select
-                            value={hostPropRooms}
-                            onChange={(e) => setHostPropRooms(e.target.value)}
-                            className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs outline-none font-medium text-slate-700"
-                          >
-                            <option value="1">1 Quarto</option>
-                            <option value="2">2 Quartos</option>
-                            <option value="3">3 Quartos</option>
-                            <option value="4 font-medium font-sans">4+ Quartos</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-[9px] uppercase font-bold text-slate-600 block">Banheiros</label>
-                          <select
-                            value={hostPropBathrooms}
-                            onChange={(e) => setHostPropBathrooms(e.target.value)}
-                            className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs outline-none font-medium text-slate-700"
-                          >
-                            <option value="1">1 Banheiro</option>
-                            <option value="1.5">1.5 Banheiros</option>
-                            <option value="2">2 Banheiros</option>
-                            <option value="3">3+ Banheiros</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ANFITRIÃO PATH DETAILS (THEIR PROPERTY DETAILS) */}
+                  {/* ANFITRIÃO / CLIENTE PATH DETAILS (PROPERTY DETAILS) */}
                   {selectedRegRole === 'HOST' && (
                     <div className="space-y-3 bg-[#0A66FF]/5 p-4 rounded-2xl border border-blue-100">
-                      <span className="text-[10px] uppercase font-bold text-[#0A66FF] block tracking-wider">Passo 2: Seu Imóvel no Airbnb (Todos os Dados)</span>
+                      <span className="text-[10px] uppercase font-bold text-[#0A66FF] block tracking-wider">Passo 2: Dados do seu Imóvel ou Residência (Para Solicitar Serviços)</span>
                       
                       <div className="space-y-1">
-                        <label className="text-[9px] uppercase font-bold text-slate-600 block">Apelido do Imóvel no Airbnb</label>
+                        <label className="text-[9px] uppercase font-bold text-slate-600 block">Apelido do Imóvel (Ex: Apartamento Copacabana, Minha Casa, Escritório)</label>
                         <input
                           type="text"
                           value={hostPropName}

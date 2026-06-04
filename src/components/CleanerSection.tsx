@@ -22,9 +22,23 @@ export default function CleanerSection({
 }: CleanerSectionProps) {
   const currentCleaner = professionals.find(p => p.id === activeCleanerId) || professionals[0];
   const [editingPix, setEditingPix] = useState(false);
-  const [editedPixKey, setEditedPixKey] = useState(currentCleaner.pixKey);
-  const [editedRegion, setEditedRegion] = useState(currentCleaner.region);
+  const [editedPixKey, setEditedPixKey] = useState(currentCleaner?.pixKey || '');
+  const [editedRegion, setEditedRegion] = useState(currentCleaner?.region || '');
   const [financeView, setFinanceView] = useState<'monthly' | 'detailed'>('monthly');
+
+  if (!currentCleaner) {
+    return (
+      <div className="bg-white border border-slate-200/80 p-8 rounded-3xl shadow-sm text-center max-w-lg mx-auto my-12 space-y-4">
+        <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-2xl border border-emerald-100">
+          🧹
+        </div>
+        <h3 className="text-base font-bold text-slate-800">Painel do Cleaner Indisponível</h3>
+        <p className="text-xs text-slate-500 leading-relaxed font-medium">
+          Nenhum profissional de limpeza cadastrado ou aprovado no momento. Cadastre um novo cleaner ou aguarde inscrições de profissionais reais para simular este painel.
+        </p>
+      </div>
+    );
+  }
 
   // Availability calendar (7-day toggles)
   const [availDays, setAvailDays] = useState<Record<string, 'Livre' | 'Descanso'>>({
