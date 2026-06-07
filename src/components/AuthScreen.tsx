@@ -334,14 +334,27 @@ export default function AuthScreen({
         return;
       }
 
+      let finalCity = regCity;
+      let finalEstado = 'SP';
+      if (regCity && regCity.includes('/')) {
+        const parts = regCity.split('/');
+        finalCity = parts[0];
+        finalEstado = parts[1];
+      }
+
       const newProperty: Property = {
         id: `prop-${Date.now()}`,
         name: hostPropName,
         address: hostPropAddress,
-        city: regCity, // use unified selected city
+        city: finalCity,
+        estado: finalEstado,
+        bairro: regBairro,
+        cep: regCep,
         imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80',
         rooms: parseFloat(hostPropRooms) || 1,
-        bathrooms: parseFloat(hostPropBathrooms) || 1
+        bathrooms: parseFloat(hostPropBathrooms) || 1,
+        ownerId: uniqueId,
+        ownerEmail: regEmail
       };
 
       // Add to main memory list

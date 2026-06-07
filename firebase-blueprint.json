@@ -29,6 +29,11 @@
         "name": { "type": "string" },
         "address": { "type": "string" },
         "city": { "type": "string" },
+        "bairro": { "type": "string" },
+        "cep": { "type": "string" },
+        "estado": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "ownerEmail": { "type": "string" },
         "imageUrl": { "type": "string" },
         "rooms": { "type": "number" },
         "bathrooms": { "type": "number" }

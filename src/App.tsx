@@ -591,8 +591,51 @@ export default function App() {
     setRequests(prev => prev.map(r => r.id === reqId ? { ...r, ...updates } : r));
   };
 
-  const handleAddProperty = (newProp: Property) => {
+  const handleAddProperty = async (newProp: Property) => {
+    // 1. Update local state immediately
     setProperties(prev => [...prev, newProp]);
+
+    // 2. Update localStorage
+    try {
+      const saved = localStorage.getItem('cleanhost_properties');
+      const currentList: Property[] = saved ? JSON.parse(saved) : [];
+      localStorage.setItem('cleanhost_properties', JSON.stringify([...currentList, newProp]));
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
+
+    // 3. Save to Firestore immediately
+    try {
+      await setDoc(doc(db, 'properties', newProp.id), newProp);
+      lastSyncedPropertiesRef.current = [...lastSyncedPropertiesRef.current, newProp];
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `properties/${newProp.id}`);
+    }
+  };
+
+  const handleUpdateProperty = async (updatedProp: Property) => {
+    // 1. Update local state immediately
+    setProperties(prev => prev.map(p => p.id === updatedProp.id ? updatedProp : p));
+
+    // 2. Update localStorage
+    try {
+      const saved = localStorage.getItem('cleanhost_properties');
+      if (saved) {
+        const parsed: Property[] = JSON.parse(saved);
+        const updatedList = parsed.map(p => p.id === updatedProp.id ? updatedProp : p);
+        localStorage.setItem('cleanhost_properties', JSON.stringify(updatedList));
+      }
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
+
+    // 3. Save to Firestore immediately
+    try {
+      await setDoc(doc(db, 'properties', updatedProp.id), updatedProp);
+      lastSyncedPropertiesRef.current = lastSyncedPropertiesRef.current.map(p => p.id === updatedProp.id ? updatedProp : p);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `properties/${updatedProp.id}`);
+    }
   };
 
   const handleUpdateCleanerInfo = (cleanerId: string, updates: Partial<Professional>) => {
@@ -985,10 +1028,12 @@ export default function App() {
                 onAddRequest={handleAddRequest}
                 onUpdateRequest={handleUpdateRequest}
                 onAddProperty={handleAddProperty}
+                onUpdateProperty={handleUpdateProperty}
                 onOpenReceipt={(req) => setSelectedReceiptRequest(req)}
                 financeSettings={financeSettings}
                 onRecordFinanceLog={(log: any) => setFinanceLogs(prev => [log, ...prev])}
                 userName={loggedInUser?.role === 'ADMIN' && (adminViewMode === 'host' || adminViewMode === 'cliente') ? 'Anfitrião / Cliente Simulado' : (loggedInUser?.name || 'Anfitrião / Cliente')}
+                loggedInUser={loggedInUser}
               />
             )}
 
@@ -1016,6 +1061,7 @@ export default function App() {
 
             {(loggedInUser.role === 'ADMIN' ? adminViewMode === 'admin' : userRole === 'ADMIN') && (
               <AdminSection 
+                properties={properties}
                 professionals={professionals}
                 requests={requests}
                 supportJobs={supportJobs}

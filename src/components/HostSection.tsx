@@ -13,10 +13,12 @@ interface HostSectionProps {
   onAddRequest: (request: CleaningRequest) => void;
   onUpdateRequest: (reqId: string, updates: Partial<CleaningRequest>) => void;
   onAddProperty: (property: Property) => void;
+  onUpdateProperty?: (property: Property) => void;
   onOpenReceipt: (request: CleaningRequest) => void;
   financeSettings?: any;
   onRecordFinanceLog?: (log: any) => void;
   userName?: string;
+  loggedInUser?: any;
 }
 
 export default function HostSection({
@@ -26,10 +28,12 @@ export default function HostSection({
   onAddRequest,
   onUpdateRequest,
   onAddProperty,
+  onUpdateProperty,
   onOpenReceipt,
   financeSettings = { standardTax: 12, loyaltyTax: 5, pixKey: 'cleanhost.oficial@gmail.com' },
   onRecordFinanceLog,
-  userName = 'Anfitrião'
+  userName = 'Anfitrião',
+  loggedInUser
 }: HostSectionProps) {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'request' | 'properties' | 'tracker'>('dashboard');
   const [selectedRequestIdForTracker, setSelectedRequestIdForTracker] = useState<string | null>(null);
@@ -39,9 +43,23 @@ export default function HostSection({
   const [showAddPropertyModal, setShowAddPropertyModal] = useState(false);
   const [newPropName, setNewPropName] = useState('');
   const [newPropAddress, setNewPropAddress] = useState('');
-  const [newPropCity, setNewPropCity] = useState('São Paulo');
+  const [newPropCity, setNewPropCity] = useState('Jundiaí');
+  const [newPropEstado, setNewPropEstado] = useState('SP');
+  const [newPropBairro, setNewPropBairro] = useState('');
+  const [newPropCep, setNewPropCep] = useState('');
   const [newPropRooms, setNewPropRooms] = useState(2);
   const [newPropBathrooms, setNewPropBathrooms] = useState(1);
+
+  // Edit Property Form State
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [editPropName, setEditPropName] = useState('');
+  const [editPropAddress, setEditPropAddress] = useState('');
+  const [editPropCity, setEditPropCity] = useState('Jundiaí');
+  const [editPropEstado, setEditPropEstado] = useState('SP');
+  const [editPropBairro, setEditPropBairro] = useState('');
+  const [editPropCep, setEditPropCep] = useState('');
+  const [editPropRooms, setEditPropRooms] = useState(2);
+  const [editPropBathrooms, setEditPropBathrooms] = useState(1);
 
   // Cleaning Wizard State
   const [wizardStep, setWizardStep] = useState(1);
@@ -82,22 +100,89 @@ export default function HostSection({
     e.preventDefault();
     if (!newPropName || !newPropAddress) return;
 
+    let finalCity = newPropCity;
+    let finalEstado = newPropEstado;
+    if (newPropCity.includes('/')) {
+      const parts = newPropCity.split('/');
+      finalCity = parts[0];
+      finalEstado = parts[1];
+    }
+
     const newProp: Property = {
       id: `prop-${Date.now()}`,
       name: newPropName,
       address: newPropAddress,
-      city: newPropCity,
+      city: finalCity,
+      estado: finalEstado,
+      bairro: newPropBairro,
+      cep: newPropCep,
       imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80',
       rooms: Number(newPropRooms),
-      bathrooms: Number(newPropBathrooms)
+      bathrooms: Number(newPropBathrooms),
+      ownerId: loggedInUser?.id || undefined,
+      ownerEmail: loggedInUser?.email || undefined
     };
 
     onAddProperty(newProp);
     setShowAddPropertyModal(false);
     setNewPropName('');
     setNewPropAddress('');
+    setNewPropBairro('');
+    setNewPropCep('');
     setNewPropRooms(2);
     setNewPropBathrooms(1);
+  };
+
+  const handleSetupEditProperty = (p: Property) => {
+    setEditingProperty(p);
+    setEditPropName(p.name);
+    setEditPropAddress(p.address || '');
+    
+    let initialCity = p.city || 'Jundiaí';
+    let initialEstado = p.estado || 'SP';
+    if (initialCity.includes('/')) {
+      const parts = initialCity.split('/');
+      initialCity = parts[0];
+      initialEstado = parts[1];
+    }
+    
+    setEditPropCity(initialCity);
+    setEditPropEstado(initialEstado);
+    setEditPropBairro(p.bairro || '');
+    setEditPropCep(p.cep || '');
+    setEditPropRooms(p.rooms || 2);
+    setEditPropBathrooms(p.bathrooms || 1);
+  };
+
+  const handleUpdatePropertySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProperty) return;
+    if (!editPropName || !editPropAddress) return;
+
+    let finalCity = editPropCity;
+    let finalEstado = editPropEstado;
+    if (editPropCity.includes('/')) {
+      const parts = editPropCity.split('/');
+      finalCity = parts[0];
+      finalEstado = parts[1];
+    }
+
+    const updatedProp: Property = {
+      ...editingProperty,
+      name: editPropName,
+      address: editPropAddress,
+      city: finalCity,
+      estado: finalEstado,
+      bairro: editPropBairro,
+      cep: editPropCep,
+      rooms: Number(editPropRooms),
+      bathrooms: Number(editPropBathrooms)
+    };
+
+    if (onUpdateProperty) {
+      onUpdateProperty(updatedProp);
+    }
+    setEditingProperty(null);
   };
 
   const handleStartRequestWizard = () => {
@@ -909,22 +994,47 @@ export default function HostSection({
 
           <div className="grid md:grid-cols-3 gap-4">
             {properties.map(p => (
-              <div key={p.id} className="border border-gray-100 rounded-3xl overflow-hidden hover:shadow-md transition-all">
-                <img 
-                  src={p.imageUrl} 
-                  alt={p.name} 
-                  className="w-full h-40 object-cover"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="p-4 space-y-2">
-                  <h4 className="font-bold text-base text-[#0B1F33]">{p.name}</h4>
-                  <p className="text-xs text-gray-500 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-[#0A66FF]" />
-                    {p.address}
-                  </p>
-                  <p className="text-[11px] text-[#0B1F33] bg-[#F4F7FA] p-2 rounded-lg font-mono">
-                    Quartos: {p.rooms} | Banheiros: {p.bathrooms}
-                  </p>
+              <div key={p.id} className="border border-gray-100 rounded-3xl overflow-hidden hover:shadow-md transition-all flex flex-col justify-between">
+                <div>
+                  <img 
+                    src={p.imageUrl} 
+                    alt={p.name} 
+                    className="w-full h-40 object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="p-4 space-y-2">
+                    <h4 className="font-bold text-base text-[#0B1F33]">{p.name}</h4>
+                    <p className="text-xs text-slate-800 font-bold flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-[#0A66FF] shrink-0" />
+                      {p.address}
+                    </p>
+                    {p.city && (
+                      <p className="text-[11px] text-gray-500 font-semibold pl-4.5">
+                        📍 {(() => {
+                          const displayCity = p.city;
+                          const hasSlash = displayCity.includes('/');
+                          const displayEstado = p.estado ? p.estado : (hasSlash ? '' : 'SP');
+                          return hasSlash 
+                            ? (p.estado && !displayCity.endsWith('/' + p.estado) ? `${displayCity.split('/')[0]}/${p.estado}` : displayCity)
+                            : (p.estado ? `${displayCity}/${p.estado}` : `${displayCity}/SP`);
+                        })()}
+                        {p.bairro && ` - Bairro: ${p.bairro}`}
+                        {p.cep && ` (CEP: ${p.cep})`}
+                      </p>
+                    )}
+                    <p className="text-[11px] text-[#0B1F33] bg-[#F4F7FA] p-2 rounded-lg font-mono">
+                      Quartos: {p.rooms} | Banheiros: {p.bathrooms}
+                    </p>
+                  </div>
+                </div>
+                <div className="p-4 pt-0">
+                  <button
+                    type="button"
+                    onClick={() => handleSetupEditProperty(p)}
+                    className="w-full cursor-pointer bg-slate-50 hover:bg-slate-100 border border-slate-200 text-[#0B1F33] font-bold text-xs py-2 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <span>✏️</span> Editar Imóvel
+                  </button>
                 </div>
               </div>
             ))}
@@ -932,7 +1042,7 @@ export default function HostSection({
 
           {/* New property modal */}
           {showAddPropertyModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
               <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
                 <button
                   onClick={() => setShowAddPropertyModal(false)}
@@ -944,25 +1054,80 @@ export default function HostSection({
                   <h3 className="font-bold text-lg text-[#0B1F33]">Novo Imóvel de Temporada</h3>
                   
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-600 block">Nome (Apelido no App)</label>
+                    <label className="text-xs font-bold text-gray-600 block">Nome (Apelido no App) <span className="text-rose-500">*</span></label>
                     <input 
                       type="text"
                       placeholder="Ex: Studio Design Paulista"
                       value={newPropName}
                       onChange={(e) => setNewPropName(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-xl text-xs outline-hidden"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden"
                       required
                     />
                   </div>
 
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2 space-y-1">
+                      <label className="text-xs font-bold text-gray-600 block">Cidade <span className="text-rose-500">*</span></label>
+                      <select
+                        value={newPropCity}
+                        onChange={(e) => setNewPropCity(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden font-semibold bg-white text-slate-800"
+                        required
+                      >
+                        <option value="Jundiaí">✅ Jundiaí — Ativa</option>
+                        <option value="Campinas">🟡 Campinas — Lista de Espera</option>
+                        <option value="São Paulo">🟡 São Paulo — Lista de Espera</option>
+                        <option value="Sorocaba">🟡 Sorocaba — Lista de Espera</option>
+                        <option value="Indaiatuba">🟡 Indaiatuba — Lista de Espera</option>
+                        <option value="Itupeva">🟡 Itupeva — Lista de Espera</option>
+                        <option value="Louveira">🟡 Louveira — Lista de Espera</option>
+                        <option value="Vinhedo">🟡 Vinhedo — Lista de Espera</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-600 block">Estado <span className="text-rose-500">*</span></label>
+                      <input 
+                        type="text"
+                        placeholder="Ex: SP"
+                        value={newPropEstado}
+                        onChange={(e) => setNewPropEstado(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden text-slate-800 font-semibold"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-600 block">Bairro</label>
+                      <input 
+                        type="text"
+                        placeholder="Ex: Anhangabaú"
+                        value={newPropBairro}
+                        onChange={(e) => setNewPropBairro(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-600 block">CEP</label>
+                      <input 
+                        type="text"
+                        placeholder="Ex: 13200-000"
+                        value={newPropCep}
+                        onChange={(e) => setNewPropCep(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-600 block">Endereço Completo</label>
+                    <label className="text-xs font-bold text-gray-600 block">Endereço Completo <span className="text-rose-500">*</span></label>
                     <input 
                       type="text"
                       placeholder="Rua Consolação, 2300"
                       value={newPropAddress}
                       onChange={(e) => setNewPropAddress(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-xl text-xs outline-hidden"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden"
                       required
                     />
                   </div>
@@ -975,7 +1140,7 @@ export default function HostSection({
                         min={1}
                         value={newPropRooms}
                         onChange={(e) => setNewPropRooms(Number(e.target.value))}
-                        className="w-full px-3 py-2 border rounded-xl text-xs outline-hidden"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden"
                       />
                     </div>
                     <div className="space-y-1">
@@ -985,17 +1150,152 @@ export default function HostSection({
                         min={1}
                         value={newPropBathrooms}
                         onChange={(e) => setNewPropBathrooms(Number(e.target.value))}
-                        className="w-full px-3 py-2 border rounded-xl text-xs outline-hidden"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden"
                       />
                     </div>
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-[#0A66FF] font-bold text-xs text-white rounded-xl hover:bg-blue-600 transition-colors cursor-pointer"
+                    className="w-full py-3 bg-[#0A66FF] font-black text-xs text-white rounded-xl hover:bg-blue-600 transition-colors cursor-pointer uppercase tracking-wider mt-2 shadow-xs"
                   >
                     Salvar Imóvel
                   </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Edit property modal */}
+          {editingProperty && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in" id="edit-property-modal-wrapper">
+              <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+                <button
+                  onClick={() => setEditingProperty(null)}
+                  className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <form onSubmit={handleUpdatePropertySubmit} className="space-y-4">
+                  <h3 className="font-bold text-lg text-[#0B1F33]">Editar Informações do Imóvel</h3>
+                  
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-600 block">Nome (Apelido no App) <span className="text-rose-500">*</span></label>
+                    <input 
+                      type="text"
+                      placeholder="Ex: Studio Design Paulista"
+                      value={editPropName}
+                      onChange={(e) => setEditPropName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden text-slate-800"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2 space-y-1">
+                      <label className="text-xs font-bold text-gray-600 block">Cidade <span className="text-rose-500">*</span></label>
+                      <select
+                        value={editPropCity}
+                        onChange={(e) => setEditPropCity(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden font-semibold bg-white text-slate-800"
+                        required
+                      >
+                        <option value="Jundiaí">✅ Jundiaí — Ativa</option>
+                        <option value="Campinas">🟡 Campinas — Lista de Espera</option>
+                        <option value="São Paulo">🟡 São Paulo — Lista de Espera</option>
+                        <option value="Sorocaba">🟡 Sorocaba — Lista de Espera</option>
+                        <option value="Indaiatuba">🟡 Indaiatuba — Lista de Espera</option>
+                        <option value="Itupeva">🟡 Itupeva — Lista de Espera</option>
+                        <option value="Louveira">🟡 Louveira — Lista de Espera</option>
+                        <option value="Vinhedo">🟡 Vinhedo — Lista de Espera</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-600 block">Estado <span className="text-rose-500">*</span></label>
+                      <input 
+                        type="text"
+                        placeholder="Ex: SP"
+                        value={editPropEstado}
+                        onChange={(e) => setEditPropEstado(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden text-slate-800 font-semibold"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-600 block">Bairro</label>
+                      <input 
+                        type="text"
+                        placeholder="Ex: Anhangabaú"
+                        value={editPropBairro}
+                        onChange={(e) => setEditPropBairro(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden text-slate-800"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-600 block">CEP</label>
+                      <input 
+                        type="text"
+                        placeholder="Ex: 13200-000"
+                        value={editPropCep}
+                        onChange={(e) => setEditPropCep(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-600 block">Endereço Completo <span className="text-rose-500">*</span></label>
+                    <input 
+                      type="text"
+                      placeholder="Rua Consolação, 2300"
+                      value={editPropAddress}
+                      onChange={(e) => setEditPropAddress(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden text-slate-800"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-600 block">Quartos</label>
+                      <input 
+                        type="number"
+                        min={1}
+                        value={editPropRooms}
+                        onChange={(e) => setEditPropRooms(Number(e.target.value))}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden text-slate-800"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-600 block">Banheiros</label>
+                      <input 
+                        type="number"
+                        min={1}
+                        value={editPropBathrooms}
+                        onChange={(e) => setEditPropBathrooms(Number(e.target.value))}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs outline-hidden text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mt-4 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditingProperty(null)}
+                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer text-center"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="w-full py-2.5 bg-[#0A66FF] hover:bg-blue-600 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer text-center shadow-xs"
+                    >
+                      Salvar Alterações
+                    </button>
+                  </div>
                 </form>
               </div>
             </div>

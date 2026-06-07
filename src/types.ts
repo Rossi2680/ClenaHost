@@ -27,6 +27,11 @@ export interface Property {
   imageUrl: string;
   rooms: number;
   bathrooms: number;
+  bairro?: string;
+  cep?: string;
+  estado?: string;
+  ownerId?: string;
+  ownerEmail?: string;
 }
 
 export interface Professional {
