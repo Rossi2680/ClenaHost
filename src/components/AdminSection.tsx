@@ -38,7 +38,7 @@ export default function AdminSection({
   onUpdateSupportJob
 }: AdminSectionProps) {
   // Navigation Tabs at the top level of Admin Panel
-  const [adminTab, setAdminTab] = useState<'dashboard' | 'users' | 'finance'>('dashboard');
+  const [adminTab, setAdminTab] = useState<'dashboard' | 'users' | 'finance' | 'cities'>('dashboard');
   
   // Temporary edit state for CleanHost Pix Key
   const [editingCompanyPix, setEditingCompanyPix] = useState(false);
@@ -354,6 +354,19 @@ export default function AdminSection({
           >
             <DollarSign className="w-4 h-4" />
             Controle Financeiro
+          </button>
+
+          <button
+            onClick={() => setAdminTab('cities')}
+            className={`cursor-pointer px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+              adminTab === 'cities'
+                ? 'bg-[#0A66FF] text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+            id="tab-exec-cities"
+          >
+            <MapPin className="w-4 h-4" />
+            Demanda &amp; Expansão
           </button>
         </div>
       </div>
@@ -843,12 +856,18 @@ export default function AdminSection({
 
                       {/* Strictly requested fields: Nome, Cidade, Data do cadastro */}
                       <div className="space-y-2.5 pt-1 text-2xs text-slate-600 font-bold leading-relaxed">
-                        {/* Cidade */}
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <div>
-                            <span className="text-[8px] text-slate-400 block uppercase font-mono font-black mb-0.5 tracking-wider">Cidade</span>
-                            <span className="text-slate-700">{user.city || 'São Paulo'}</span>
+                        {/* Cidade, Bairro e CEP */}
+                        <div className="flex items-start gap-2">
+                          <MapPin className="w-3.5 h-3.5 text-[#0A66FF] shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <span className="text-[8px] text-[#0A66FF] block uppercase font-mono font-black mb-0.5 tracking-wider font-sans">Geografia / Proximidade</span>
+                            <span className="text-slate-800 block leading-tight">{user.city || 'São Paulo'}</span>
+                            {user.bairro && (
+                              <span className="text-slate-500 block text-[10px] whitespace-normal leading-tight mt-0.5">Bairro: {user.bairro}</span>
+                            )}
+                            {user.cep && (
+                              <span className="text-slate-400 block text-[9px] font-mono font-medium leading-none mt-0.5">CEP: {user.cep}</span>
+                            )}
                           </div>
                         </div>
 
@@ -1350,6 +1369,273 @@ export default function AdminSection({
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {adminTab === 'cities' && (
+        <div className="space-y-6 font-sans animate-fade-in" id="administration-cities-panel">
+          
+          {/* Header Description */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-150 shadow-3xs flex flex-col md:flex-row justify-between md:items-center gap-4">
+            <div className="space-y-1">
+              <span className="text-[#0A66FF] text-[10px] font-black uppercase tracking-wider block font-mono">🏢 Gestão de Cobertura Geográfica</span>
+              <h2 className="text-base font-black text-[#0B1F33] uppercase">Demanda Regional &amp; Expansão Ponderada</h2>
+              <p className="text-xs text-slate-500 leading-normal max-w-xl font-bold">
+                Monitore em tempo real quais cidades possuem maior interesse acumulado de anfitriões, limpadores e suporte. Ative novos polos estrategicamente com base nessas métricas.
+              </p>
+            </div>
+            <div className="bg-[#4338CA] text-white p-4 rounded-2xl border border-indigo-500/10 shrink-0 select-none text-center">
+              <span className="block text-[8px] uppercase tracking-wider font-bold">Cidade Polo Ativo</span>
+              <span className="text-sm font-black tracking-wide flex items-center justify-center gap-1">📍 Jundiaí/SP</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* LEFT COLUMN: DEMANDA POR CIDADE (TABLE) */}
+            <div className="lg:col-span-8 bg-white rounded-3xl border border-slate-150 shadow-3xs overflow-hidden">
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">📊</span>
+                  <div>
+                    <h3 className="font-extrabold text-xs text-[#0B1F33] uppercase tracking-wide">Placar de Demanda por Município</h3>
+                    <p className="text-[10px] text-slate-400">Ordenado automaticamente por maior quantidade de interessados (reais do banco de dados).</p>
+                  </div>
+                </div>
+                <span className="bg-slate-200 text-slate-700 font-mono text-[9px] font-bold uppercase rounded-md px-2 py-0.5">Mapeamento Real</span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100/60 border-b border-slate-150 text-[10px] font-black text-slate-500 uppercase tracking-wider select-none">
+                      <th className="py-3.5 px-4 font-bold">Cidade</th>
+                      <th className="py-3.5 px-3 font-bold text-center">Status</th>
+                      <th className="py-3.5 px-3 font-bold text-center">Anfitriões / Clientes</th>
+                      <th className="py-3.5 px-3 font-bold text-center">Cleaners / Faxinas</th>
+                      <th className="py-3.5 px-3 font-bold text-center">Rede de Apoio</th>
+                      <th className="py-3.5 px-4 font-bold text-right">Total Cadastros</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-bold text-slate-700">
+                    {(() => {
+                      // Live Cities structure with real counters
+                      const CITIES_LIST = [
+                        { name: 'Jundiaí/SP', status: 'ATIVA' },
+                        { name: 'Campinas/SP', status: 'LISTA_DE_ESPERA' },
+                        { name: 'São Paulo/SP', status: 'LISTA_DE_ESPERA' },
+                        { name: 'Sorocaba/SP', status: 'LISTA_DE_ESPERA' },
+                        { name: 'Indaiatuba/SP', status: 'LISTA_DE_ESPERA' },
+                        { name: 'Itupeva/SP', status: 'LISTA_DE_ESPERA' },
+                        { name: 'Louveira/SP', status: 'LISTA_DE_ESPERA' },
+                        { name: 'Vinhedo/SP', status: 'LISTA_DE_ESPERA' },
+                      ];
+
+                      const mapped = CITIES_LIST.map(city => {
+                        const cityUsers = safeUsers.filter((u: any) => {
+                          if (!u.city) return false;
+                          const uc = u.city.trim().toLowerCase();
+                          const tc = city.name.trim().toLowerCase();
+                          if (uc.includes('jundiai') && tc.includes('jundiaí')) return true;
+                          if (uc.includes('são paulo') && tc.includes('são paulo')) return true;
+                          if (uc.includes('sao paulo') && tc.includes('são paulo')) return true;
+                          const ucClean = uc.replace('/sp', '').replace('-sp', '').trim();
+                          const tcClean = tc.replace('/sp', '').trim();
+                          return ucClean === tcClean || uc.includes(tcClean) || tcClean.includes(ucClean);
+                        });
+
+                        const hosts = cityUsers.filter((u: any) => u.role === 'HOST' || u.role === 'CLIENTE').length;
+                        const cleaners = cityUsers.filter((u: any) => u.role === 'CLEANER').length;
+                        const support = cityUsers.filter((u: any) => u.role === 'SUPPORT').length;
+                        const total = cityUsers.length;
+                        
+                        // Score calculation: Hosts * 10, Cleaners * 6, Support Support * 4
+                        const potentialScore = (hosts * 10) + (cleaners * 6) + (support * 4);
+
+                        return {
+                          ...city,
+                          hosts,
+                          cleaners,
+                          support,
+                          total,
+                          potentialScore
+                        };
+                      });
+
+                      // Automatic sort by total count descending
+                      const sorted = [...mapped].sort((a, b) => b.total - a.total);
+
+                      return sorted.map((city, idx) => {
+                        const isAtiva = city.status === 'ATIVA';
+                        return (
+                          <tr key={city.name} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="py-3.5 px-4 font-bold text-[#0B1F33] flex items-center gap-2">
+                              <span className="text-[10px] text-slate-400 font-mono w-4">#{idx + 1}</span>
+                              <span>{city.name}</span>
+                            </td>
+
+                            <td className="py-3.5 px-3 text-center">
+                              {isAtiva ? (
+                                <span className="inline-block px-2.5 py-0.5 text-[8px] font-black uppercase text-emerald-700 bg-emerald-100 rounded-md">
+                                  ✅ Ativa
+                                </span>
+                              ) : (
+                                <span className="inline-block px-2.5 py-0.5 text-[8px] font-black uppercase text-amber-700 bg-amber-100 rounded-md">
+                                  🟡 Espera
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3.5 px-3 text-center font-black text-slate-800">
+                              {city.hosts}
+                            </td>
+                            <td className="py-3.5 px-3 text-center font-black text-slate-800">
+                              {city.cleaners}
+                            </td>
+                            <td className="py-3.5 px-3 text-center font-black text-slate-800">
+                              {city.support}
+                            </td>
+
+                            <td className="py-3.5 px-4 text-right font-mono font-black text-xs text-[#0A66FF]">
+                              {city.total}
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* RIGHT COLUMN: CRITÉRIO DE EXPANSÃO */}
+            <div className="lg:col-span-4 space-y-4">
+              
+              <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-3xs space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🚀</span>
+                  <div>
+                    <h3 className="font-extrabold text-xs text-[#0B1F33] uppercase tracking-wide">Critério de Expansão</h3>
+                    <p className="text-[9px] text-slate-400">Diretrizes de pontuação técnica.</p>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-slate-500 leading-relaxed font-semibold">
+                  A nossa ativação de região obedece aos seguintes pilares de densidade ótima de oferta e demanda:
+                </p>
+
+                <div className="space-y-2 pt-1 text-[10px] leading-relaxed text-slate-605 text-slate-600 font-bold">
+                  <div className="flex items-start gap-2 bg-slate-50 p-2 rounded-xl border">
+                    <span className="text-xs mt-0.5">🏠</span>
+                    <div>
+                      <h4 className="text-slate-800 font-black text-[9px] uppercase">1. Clientes Iniciados (Peso 5)</h4>
+                      <p className="font-normal text-slate-500 text-[9px] mt-0.5">Garante faturamento imediato para manter profissionais na plataforma.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2 bg-slate-50 p-2 rounded-xl border">
+                    <span className="text-xs mt-0.5">🧹</span>
+                    <div>
+                      <h4 className="text-slate-800 font-black text-[9px] uppercase">2. Força de Trabalho (Peso 3)</h4>
+                      <p className="font-normal text-slate-500 text-[9px] mt-0.5">Disponibilidade ideal de limpadores e prestadores parceiros cadastrados.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2 bg-slate-50 p-2 rounded-xl border">
+                    <span className="text-xs mt-0.5">⏱️</span>
+                    <div>
+                      <h4 className="text-slate-800 font-black text-[9px] uppercase">3. Lista de Espera (Peso 2)</h4>
+                      <p className="font-normal text-slate-500 text-[9px] mt-0.5">Inscrições orgânicas de interesse acumulado para lançamento com impacto.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* CIDADES COM MAIOR POTENCIAL */}
+              <div className="bg-[#0B1F33] text-white p-5 rounded-3xl shadow-3xs space-y-4 border border-slate-850">
+                <div className="flex items-center gap-2 text-[#12D6C5]">
+                  <span>✨</span>
+                  <h3 className="font-extrabold text-xs uppercase tracking-wide">Potencial de Ativação (Espera)</h3>
+                </div>
+                
+                <p className="text-[10px] text-slate-300 leading-relaxed font-sans">
+                  Lista ponderada de expansão calculada dinamicamente sobre a base de usuários:
+                </p>
+
+                <div className="space-y-3 pt-1">
+                  {(() => {
+                    const CITIES_LIST = [
+                      { name: 'Campinas/SP', status: 'LISTA_DE_ESPERA' },
+                      { name: 'São Paulo/SP', status: 'LISTA_DE_ESPERA' },
+                      { name: 'Sorocaba/SP', status: 'LISTA_DE_ESPERA' },
+                      { name: 'Indaiatuba/SP', status: 'LISTA_DE_ESPERA' },
+                      { name: 'Itupeva/SP', status: 'LISTA_DE_ESPERA' },
+                      { name: 'Louveira/SP', status: 'LISTA_DE_ESPERA' },
+                      { name: 'Vinhedo/SP', status: 'LISTA_DE_ESPERA' },
+                    ];
+
+                    const scored = CITIES_LIST.map(city => {
+                      const cityUsers = safeUsers.filter((u: any) => {
+                        if (!u.city) return false;
+                        const uc = u.city.trim().toLowerCase();
+                        const tc = city.name.trim().toLowerCase();
+                        const ucClean = uc.replace('/sp', '').replace('-sp', '').trim();
+                        const tcClean = tc.replace('/sp', '').trim();
+                        return ucClean === tcClean || uc.includes(tcClean) || tcClean.includes(ucClean);
+                      });
+
+                      const hosts = cityUsers.filter((u: any) => u.role === 'HOST' || u.role === 'CLIENTE').length;
+                      const cleaners = cityUsers.filter((u: any) => u.role === 'CLEANER').length;
+                      const support = cityUsers.filter((u: any) => u.role === 'SUPPORT').length;
+                      const total = cityUsers.length;
+                      
+                      const potentialScore = (hosts * 10) + (cleaners * 6) + (support * 4);
+
+                      return {
+                        ...city,
+                        hosts,
+                        cleaners,
+                        support,
+                        total,
+                        potentialScore
+                      };
+                    }).sort((a, b) => b.potentialScore - a.potentialScore);
+
+                    return scored.map((city, idx) => {
+                      const targetTotal = 15;
+                      const progressPct = Math.min((city.total / targetTotal) * 100, 100);
+                      
+                      return (
+                        <div key={city.name} className="space-y-1.5 font-sans">
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="font-bold text-white flex items-center gap-1">
+                              <span className="text-[#12D6C5] font-mono">#{idx + 1}</span> {city.name}
+                            </span>
+                            <span className="text-[#12D6C5] font-mono font-bold">{progressPct.toFixed(0)}% Meta</span>
+                          </div>
+
+                          <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden flex">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 ${idx === 0 ? 'bg-[#12D6C5] shadow-xs' : 'bg-slate-400'}`}
+                              style={{ width: `${progressPct}%` }}
+                            ></div>
+                          </div>
+                          
+                          <div className="flex justify-between text-[8px] text-slate-400 font-mono font-bold leading-none">
+                            <span>{city.total} de {targetTotal} Un.</span>
+                            <span>Score: {city.potentialScore} pts</span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
         </div>
       )}
 

@@ -55,6 +55,20 @@ interface AuthScreenProps {
   hideDemoControls?: boolean;
 }
 
+const normalizeCity = (cityStr: string | undefined): string => {
+  if (!cityStr) return 'Outras';
+  const c = cityStr.trim().toLowerCase();
+  if (c.includes('jundiai') || c.includes('jundiaí')) return 'Jundiaí/SP';
+  if (c.includes('campinas')) return 'Campinas/SP';
+  if (c.includes('são paulo') || c.includes('sao paulo')) return 'São Paulo/SP';
+  if (c.includes('sorocaba')) return 'Sorocaba/SP';
+  if (c.includes('indaiatuba')) return 'Indaiatuba/SP';
+  if (c.includes('itupeva')) return 'Itupeva/SP';
+  if (c.includes('louveira')) return 'Louveira/SP';
+  if (c.includes('vinhedo')) return 'Vinhedo/SP';
+  return cityStr.trim();
+};
+
 export default function AuthScreen({
   onLoginSuccess,
   existingProfessionals,
@@ -72,6 +86,15 @@ export default function AuthScreen({
   const [selectedRegRole, setSelectedRegRole] = useState<UserRole>('HOST');
   const [showPassword, setShowPassword] = useState(false);
 
+  const getCityMetrics = (cityName: string) => {
+    const cityUsers = (registeredUsers || []).filter(u => normalizeCity(u.city) === cityName);
+    const hosts = cityUsers.filter(u => u.role === 'HOST' || u.role === 'CLIENTE').length;
+    const cleaners = cityUsers.filter(u => u.role === 'CLEANER').length;
+    const support = cityUsers.filter(u => u.role === 'SUPPORT').length;
+    const total = cityUsers.length;
+    return { hosts, cleaners, support, total };
+  };
+
   // Form Fields - Login
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -84,6 +107,8 @@ export default function AuthScreen({
   const [regDocument, setRegDocument] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regCity, setRegCity] = useState('');
+  const [regBairro, setRegBairro] = useState('');
+  const [regCep, setRegCep] = useState('');
   const [regRegion, setRegRegion] = useState('');
   const [regPixKey, setRegPixKey] = useState('');
   const [regError, setRegError] = useState('');
@@ -289,6 +314,16 @@ export default function AuthScreen({
       return;
     }
 
+    if (!regCity) {
+      setRegError('Por favor, selecione sua cidade.');
+      return;
+    }
+
+    if (!regBairro) {
+      setRegError('Por favor, informe seu bairro.');
+      return;
+    }
+
     const uniqueId = `${selectedRegRole.toLowerCase()}-${Date.now()}`;
     const registrationDate = new Date().toISOString();
 
@@ -303,7 +338,7 @@ export default function AuthScreen({
         id: `prop-${Date.now()}`,
         name: hostPropName,
         address: hostPropAddress,
-        city: hostPropCity,
+        city: regCity, // use unified selected city
         imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80',
         rooms: parseFloat(hostPropRooms) || 1,
         bathrooms: parseFloat(hostPropBathrooms) || 1
@@ -321,10 +356,13 @@ export default function AuthScreen({
         phone: regPhone,
         document: regDocument,
         photoUrl: regPhoto,
-        city: regCity || hostPropCity || 'São Paulo',
+        city: regCity,
+        bairro: regBairro,
+        cep: regCep,
         createdAt: registrationDate,
         isApproved: false,
-        approvalStatus: 'pending'
+        approvalStatus: regCity === 'Jundiaí/SP' ? 'pending' : 'LISTA_DE_ESPERA',
+        status: regCity === 'Jundiaí/SP' ? 'PENDENTE' : 'LISTA_DE_ESPERA'
       });
 
       setRegSuccess(true);
@@ -373,10 +411,13 @@ export default function AuthScreen({
         phone: regPhone,
         document: regDocument,
         photoUrl: regPhoto,
-        city: regCity || 'São Paulo',
+        city: regCity,
+        bairro: regBairro,
+        cep: regCep,
         createdAt: registrationDate,
         isApproved: false,
-        approvalStatus: 'pending',
+        approvalStatus: regCity === 'Jundiaí/SP' ? 'pending' : 'LISTA_DE_ESPERA',
+        status: regCity === 'Jundiaí/SP' ? 'PENDENTE' : 'LISTA_DE_ESPERA',
         extra: { cleanerId: uniqueId }
       });
       
@@ -422,10 +463,13 @@ export default function AuthScreen({
         phone: regPhone,
         document: regDocument,
         photoUrl: regPhoto,
-        city: regCity || 'São Paulo',
+        city: regCity,
+        bairro: regBairro,
+        cep: regCep,
         createdAt: registrationDate,
         isApproved: false,
-        approvalStatus: 'pending'
+        approvalStatus: regCity === 'Jundiaí/SP' ? 'pending' : 'LISTA_DE_ESPERA',
+        status: regCity === 'Jundiaí/SP' ? 'PENDENTE' : 'LISTA_DE_ESPERA'
       });
 
       setRegSuccess(true);
@@ -442,7 +486,8 @@ export default function AuthScreen({
   };
 
   return (
-    <div className="max-w-4xl mx-auto my-6 bg-white rounded-3xl border border-blue-50 shadow-lg overflow-hidden grid md:grid-cols-12 min-h-[600px] animate-fade-in">
+    <>
+      <div className="max-w-4xl mx-auto my-6 bg-white rounded-3xl border border-blue-50 shadow-lg overflow-hidden grid md:grid-cols-12 min-h-[600px] animate-fade-in">
       
       {/* Dynamic left decorative info panel */}
       <div className="md:col-span-5 bg-gradient-to-br from-[#0B1F33] via-[#091C2D] to-[#0A66FF] p-8 text-white flex flex-col justify-between relative overflow-hidden">
@@ -707,6 +752,61 @@ export default function AuthScreen({
                         placeholder="Mínimo 6 caracteres"
                         className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs outline-none font-semibold"
                       />
+                    </div>
+
+                    {/* Cidade, Bairro e CEP (Para proximidade) */}
+                    <div className="space-y-3 pt-2 border-t border-slate-200">
+                      <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider">Região de Atuação (Geolocalização / Proximidade)</span>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[9px] uppercase font-bold text-slate-500 block">Cidade <span className="text-rose-500">*</span></label>
+                          <select
+                            value={regCity}
+                            onChange={(e) => setRegCity(e.target.value)}
+                            className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs outline-none font-semibold text-slate-800"
+                          >
+                            <option value="">Selecione...</option>
+                            <option value="Jundiaí/SP">Jundiaí/SP (Ativa)</option>
+                            <option value="Campinas/SP">Campinas/SP</option>
+                            <option value="São Paulo/SP">São Paulo/SP</option>
+                            <option value="Sorocaba/SP">Sorocaba/SP</option>
+                            <option value="Indaiatuba/SP">Indaiatuba/SP</option>
+                            <option value="Itupeva/SP">Itupeva/SP</option>
+                            <option value="Louveira/SP">Louveira/SP</option>
+                            <option value="Vinhedo/SP">Vinhedo/SP</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] uppercase font-bold text-slate-500 block">Bairro <span className="text-rose-500">*</span></label>
+                          <input
+                            type="text"
+                            value={regBairro}
+                            onChange={(e) => setRegBairro(e.target.value)}
+                            placeholder="Ex: Anhangabaú"
+                            className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs outline-none text-slate-800"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] uppercase font-bold text-slate-500 block">CEP (Opcional)</label>
+                          <input
+                            type="text"
+                            value={regCep}
+                            onChange={(e) => setRegCep(e.target.value)}
+                            placeholder="Ex: 13200-000"
+                            className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs outline-none text-slate-800"
+                          />
+                        </div>
+                      </div>
+
+                      {regCity && regCity !== 'Jundiaí/SP' && (
+                        <div id="waitlist-toast" className="bg-amber-50 text-amber-950 border border-amber-200 rounded-xl p-3 text-[10px] leading-relaxed font-bold animate-fade-in">
+                          ⚠️ Sua cidade ainda está em fase de expansão.
+                          Cadastre-se agora para entrar na lista de espera e seja avisado quando a CleanHost chegar à sua região.
+                        </div>
+                      )}
                     </div>
 
                     {/* Foto de Rosto (Obrigatória) */}
@@ -1009,5 +1109,139 @@ export default function AuthScreen({
       </div>
 
     </div>
+
+    {/* SEÇÃO PÚBLICA: CIDADES CLEANHOST & EXPANSÃO */}
+    <div className="max-w-4xl mx-auto my-12 px-4 sm:px-0 font-sans space-y-12 animate-fade-in" id="public-landing-expansion">
+      
+      {/* TEXTO INSTITUCIONAL & DIFERENCIAL */}
+      <div className="grid md:grid-cols-2 gap-8 items-start bg-slate-50 p-8 rounded-3xl border border-slate-150">
+        <div className="space-y-4">
+          <div className="inline-block bg-[#0A66FF]/10 text-[#0A66FF] text-[10px] font-black uppercase px-2.5 py-1 rounded-full">
+            Expansão Regional Inteligente
+          </div>
+          <h2 className="text-xl md:text-2xl font-black text-[#0B1F33] tracking-tight">
+            Crescemos onde a demanda acontece
+          </h2>
+          <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+            A CleanHost expande para novas regiões com base em cadastros reais de anfitriões, clientes e profissionais. Cadastre-se e ajude a levar a plataforma para sua cidade.
+          </p>
+          <div className="bg-sky-50 p-3.5 rounded-2xl border border-sky-100 flex items-start gap-2.5 mt-2">
+            <span className="text-sky-600 text-sm mt-0.5">💡</span>
+            <p className="text-[11px] text-sky-800 leading-normal">
+              Cidade Ativa de Lançamento Oficial: <strong>Jundiaí/SP</strong>. Cadastros em outras cidades entram para a lista de espera ponderada para expansão ordenada.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="inline-block bg-emerald-500/10 text-emerald-700 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">
+            Ecossistema Completo de Serviços
+          </div>
+          <h3 className="text-sm font-black text-[#0B1F33] uppercase">
+            Diferencial CleanHost
+          </h3>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Diferente de soluções convencionais, não atendemos apenas faxina. Conectamos todas as necessidades de manutenção predial e hospedagem em um único ecossistema coordenado:
+          </p>
+          <div className="grid grid-cols-1 gap-2 pt-1 font-sans">
+            <div className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-150 shadow-3xs hover:scale-[1.01] transition-transform">
+              <span className="text-base">🧹</span>
+              <span className="text-[10px] text-slate-700"><strong>Profissionais de Limpeza:</strong> Faxinas recorrentes, limpezas pós-obra e vistorias rápidas</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-150 shadow-3xs hover:scale-[1.01] transition-transform">
+              <span className="text-base">🔧</span>
+              <span className="text-[10px] text-slate-700"><strong>Rede de Apoio:</strong> Eletricistas, Encanadores, Chaveiros, Pintores e Pedreiros qualificados</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-150 shadow-3xs hover:scale-[1.01] transition-transform">
+              <span className="text-base">🏠</span>
+              <span className="text-[10px] text-slate-700"><strong>Anfitriões e Clientes:</strong> Proprietários e gestores de aluguel por temporada</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CIDADES CLEANHOST & CONTADORES DE DEMANDA */}
+      <div className="space-y-6">
+        <div className="space-y-2 text-center md:text-left">
+          <h2 className="text-base font-black text-[#0B1F33] uppercase tracking-wider flex items-center justify-center md:justify-start gap-2 font-display">
+            <span>📍</span> Cidades CleanHost &amp; Lista de Espera Real
+          </h2>
+          <p className="text-xs text-slate-500">
+            Acompanhe o termômetro de interesse operacional. Ativamos a cobertura com base no número total de cadastros reais em auditoria.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="cidades-grid-demand">
+          {/* Jundiaí (Ativa) */}
+          {(() => {
+            const metrics = getCityMetrics('Jundiaí/SP');
+            return (
+              <div className="bg-emerald-500/5 border-2 border-emerald-500 p-5 rounded-3xl space-y-4 shadow-3xs transition-transform hover:scale-[1.02] relative">
+                <span className="absolute top-4 right-4 bg-emerald-600 text-white font-mono text-[8px] font-bold uppercase px-2 py-0.5 rounded-md">Ativa</span>
+                <div>
+                  <h3 className="font-extrabold text-xs text-[#0B1F33] flex items-center gap-1">✅ Jundiaí/SP</h3>
+                  <p className="text-[9px] text-emerald-700 font-bold mt-1">Operações Liberadas 100%</p>
+                </div>
+                <div className="space-y-1.5 pt-2 border-t border-emerald-500/10 text-[10px] font-bold text-slate-600">
+                  <div className="flex justify-between">
+                    <span>🏠 Anfitriões/Cli:</span>
+                    <span className="text-[#0B1F33] font-black">{metrics.hosts}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>🧹 Faxinas:</span>
+                    <span className="text-[#0B1F33] font-black">{metrics.cleaners}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>🔧 Apoio Técnico:</span>
+                    <span className="text-[#0B1F33] font-black">{metrics.support}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-emerald-500/20 pt-1.5 text-[#0B1F33] font-black text-xs">
+                    <span>Total Cadastros:</span>
+                    <span className="text-emerald-700 font-mono text-xs">{metrics.total}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* List of Waiting Cities */}
+          {[
+            'Campinas/SP', 'São Paulo/SP', 'Sorocaba/SP', 
+            'Indaiatuba/SP', 'Itupeva/SP', 'Louveira/SP', 'Vinhedo/SP'
+          ].map(cityName => {
+            const metrics = getCityMetrics(cityName);
+            return (
+              <div key={cityName} className="bg-white border border-slate-200 p-5 rounded-3xl space-y-4 shadow-3xs transition-transform hover:scale-[1.01] relative">
+                <span className="absolute top-4 right-4 bg-amber-105 text-amber-800 font-mono text-[8px] font-bold uppercase px-2 py-0.5 rounded-md border border-amber-200">Espera</span>
+                <div>
+                  <h3 className="font-extrabold text-xs text-slate-800">🟡 {cityName}</h3>
+                  <p className="text-[9px] text-slate-400 mt-1">Fase de Captação de Demanda</p>
+                </div>
+                <div className="space-y-1.5 pt-2 border-t border-slate-100 text-[10px] font-bold text-slate-500">
+                  <div className="flex justify-between">
+                    <span>🏠 Anfitriões/Cli:</span>
+                    <span className="text-slate-800 font-black">{metrics.hosts}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>🧹 Faxinas:</span>
+                    <span className="text-slate-800 font-black">{metrics.cleaners}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>🔧 Apoio Técnico:</span>
+                    <span className="text-slate-800 font-black">{metrics.support}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-100 pt-1.5 text-slate-800 font-black text-xs">
+                     <span>Total Espera:</span>
+                    <span className="text-[#0A66FF] font-mono text-xs">{metrics.total}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+    </div>
+  </>
   );
 }
