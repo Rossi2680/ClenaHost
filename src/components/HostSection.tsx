@@ -1075,8 +1075,8 @@ export default function HostSection({
                         required
                       >
                         <option value="Jundiaí">✅ Jundiaí — Ativa</option>
+                        <option value="São Paulo">✅ São Paulo — Ativa</option>
                         <option value="Campinas">🟡 Campinas — Lista de Espera</option>
-                        <option value="São Paulo">🟡 São Paulo — Lista de Espera</option>
                         <option value="Sorocaba">🟡 Sorocaba — Lista de Espera</option>
                         <option value="Indaiatuba">🟡 Indaiatuba — Lista de Espera</option>
                         <option value="Itupeva">🟡 Itupeva — Lista de Espera</option>
@@ -1201,8 +1201,8 @@ export default function HostSection({
                         required
                       >
                         <option value="Jundiaí">✅ Jundiaí — Ativa</option>
+                        <option value="São Paulo">✅ São Paulo — Ativa</option>
                         <option value="Campinas">🟡 Campinas — Lista de Espera</option>
-                        <option value="São Paulo">🟡 São Paulo — Lista de Espera</option>
                         <option value="Sorocaba">🟡 Sorocaba — Lista de Espera</option>
                         <option value="Indaiatuba">🟡 Indaiatuba — Lista de Espera</option>
                         <option value="Itupeva">🟡 Itupeva — Lista de Espera</option>

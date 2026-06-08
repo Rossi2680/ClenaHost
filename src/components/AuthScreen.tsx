@@ -374,8 +374,8 @@ export default function AuthScreen({
         cep: regCep,
         createdAt: registrationDate,
         isApproved: false,
-        approvalStatus: regCity === 'Jundiaí/SP' ? 'pending' : 'LISTA_DE_ESPERA',
-        status: regCity === 'Jundiaí/SP' ? 'PENDENTE' : 'LISTA_DE_ESPERA'
+        approvalStatus: (regCity === 'Jundiaí/SP' || regCity === 'São Paulo/SP') ? 'pending' : 'LISTA_DE_ESPERA',
+        status: (regCity === 'Jundiaí/SP' || regCity === 'São Paulo/SP') ? 'PENDENTE' : 'LISTA_DE_ESPERA'
       });
 
       setRegSuccess(true);
@@ -429,8 +429,8 @@ export default function AuthScreen({
         cep: regCep,
         createdAt: registrationDate,
         isApproved: false,
-        approvalStatus: regCity === 'Jundiaí/SP' ? 'pending' : 'LISTA_DE_ESPERA',
-        status: regCity === 'Jundiaí/SP' ? 'PENDENTE' : 'LISTA_DE_ESPERA',
+        approvalStatus: (regCity === 'Jundiaí/SP' || regCity === 'São Paulo/SP') ? 'pending' : 'LISTA_DE_ESPERA',
+        status: (regCity === 'Jundiaí/SP' || regCity === 'São Paulo/SP') ? 'PENDENTE' : 'LISTA_DE_ESPERA',
         extra: { cleanerId: uniqueId }
       });
       
@@ -481,8 +481,8 @@ export default function AuthScreen({
         cep: regCep,
         createdAt: registrationDate,
         isApproved: false,
-        approvalStatus: regCity === 'Jundiaí/SP' ? 'pending' : 'LISTA_DE_ESPERA',
-        status: regCity === 'Jundiaí/SP' ? 'PENDENTE' : 'LISTA_DE_ESPERA'
+        approvalStatus: (regCity === 'Jundiaí/SP' || regCity === 'São Paulo/SP') ? 'pending' : 'LISTA_DE_ESPERA',
+        status: (regCity === 'Jundiaí/SP' || regCity === 'São Paulo/SP') ? 'PENDENTE' : 'LISTA_DE_ESPERA'
       });
 
       setRegSuccess(true);
@@ -779,10 +779,10 @@ export default function AuthScreen({
                             onChange={(e) => setRegCity(e.target.value)}
                             className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs outline-none font-semibold text-slate-800"
                           >
-                            <option value="">Selecione...</option>
+                             <option value="">Selecione...</option>
                             <option value="Jundiaí/SP">Jundiaí/SP (Ativa)</option>
+                            <option value="São Paulo/SP">São Paulo/SP (Ativa)</option>
                             <option value="Campinas/SP">Campinas/SP</option>
-                            <option value="São Paulo/SP">São Paulo/SP</option>
                             <option value="Sorocaba/SP">Sorocaba/SP</option>
                             <option value="Indaiatuba/SP">Indaiatuba/SP</option>
                             <option value="Itupeva/SP">Itupeva/SP</option>
@@ -814,7 +814,7 @@ export default function AuthScreen({
                         </div>
                       </div>
 
-                      {regCity && regCity !== 'Jundiaí/SP' && (
+                      {regCity && regCity !== 'Jundiaí/SP' && regCity !== 'São Paulo/SP' && (
                         <div id="waitlist-toast" className="bg-amber-50 text-amber-950 border border-amber-200 rounded-xl p-3 text-[10px] leading-relaxed font-bold animate-fade-in">
                           ⚠️ Sua cidade ainda está em fase de expansão.
                           Cadastre-se agora para entrar na lista de espera e seja avisado quando a CleanHost chegar à sua região.
@@ -1141,7 +1141,7 @@ export default function AuthScreen({
           <div className="bg-sky-50 p-3.5 rounded-2xl border border-sky-100 flex items-start gap-2.5 mt-2">
             <span className="text-sky-600 text-sm mt-0.5">💡</span>
             <p className="text-[11px] text-sky-800 leading-normal">
-              Cidade Ativa de Lançamento Oficial: <strong>Jundiaí/SP</strong>. Cadastros em outras cidades entram para a lista de espera ponderada para expansão ordenada.
+              Cidades Ativas de Lançamento Oficial: <strong>Jundiaí/SP e São Paulo/SP</strong>. Cadastros em outras cidades entram para a lista de espera ponderada para expansão ordenada.
             </p>
           </div>
         </div>
@@ -1185,14 +1185,16 @@ export default function AuthScreen({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="cidades-grid-demand">
-          {/* Jundiaí (Ativa) */}
-          {(() => {
-            const metrics = getCityMetrics('Jundiaí/SP');
+          {/* Active Cities */}
+          {[
+            'Jundiaí/SP', 'São Paulo/SP'
+          ].map(cityName => {
+            const metrics = getCityMetrics(cityName);
             return (
-              <div className="bg-emerald-500/5 border-2 border-emerald-500 p-5 rounded-3xl space-y-4 shadow-3xs transition-transform hover:scale-[1.02] relative">
+              <div key={cityName} className="bg-emerald-500/5 border-2 border-emerald-500 p-5 rounded-3xl space-y-4 shadow-3xs transition-transform hover:scale-[1.02] relative">
                 <span className="absolute top-4 right-4 bg-emerald-600 text-white font-mono text-[8px] font-bold uppercase px-2 py-0.5 rounded-md">Ativa</span>
                 <div>
-                  <h3 className="font-extrabold text-xs text-[#0B1F33] flex items-center gap-1">✅ Jundiaí/SP</h3>
+                  <h3 className="font-extrabold text-xs text-[#0B1F33] flex items-center gap-1">✅ {cityName}</h3>
                   <p className="text-[9px] text-emerald-700 font-bold mt-1">Operações Liberadas 100%</p>
                 </div>
                 <div className="space-y-1.5 pt-2 border-t border-emerald-500/10 text-[10px] font-bold text-slate-600">
@@ -1215,11 +1217,11 @@ export default function AuthScreen({
                 </div>
               </div>
             );
-          })()}
+          })}
 
           {/* List of Waiting Cities */}
           {[
-            'Campinas/SP', 'São Paulo/SP', 'Sorocaba/SP', 
+            'Campinas/SP', 'Sorocaba/SP', 
             'Indaiatuba/SP', 'Itupeva/SP', 'Louveira/SP', 'Vinhedo/SP'
           ].map(cityName => {
             const metrics = getCityMetrics(cityName);

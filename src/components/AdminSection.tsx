@@ -1380,7 +1380,7 @@ export default function AdminSection({
         const CITIES_LIST = [
           { name: 'Jundiaí/SP', status: 'ATIVA' },
           { name: 'Campinas/SP', status: 'LISTA_DE_ESPERA' },
-          { name: 'São Paulo/SP', status: 'LISTA_DE_ESPERA' },
+          { name: 'São Paulo/SP', status: 'ATIVA' },
           { name: 'Sorocaba/SP', status: 'LISTA_DE_ESPERA' },
           { name: 'Indaiatuba/SP', status: 'LISTA_DE_ESPERA' },
           { name: 'Itupeva/SP', status: 'LISTA_DE_ESPERA' },
@@ -1473,8 +1473,8 @@ export default function AdminSection({
                 </p>
               </div>
               <div className="bg-[#4338CA] text-white p-4 rounded-2xl border border-indigo-500/10 shrink-0 select-none text-center">
-                <span className="block text-[8px] uppercase tracking-wider font-bold">Cidade Polo Ativo</span>
-                <span className="text-sm font-black tracking-wide flex items-center justify-center gap-1">📍 Jundiaí/SP</span>
+                <span className="block text-[8px] uppercase tracking-wider font-bold">Polos Ativos</span>
+                <span className="text-xs font-black tracking-wide flex items-center justify-center gap-1">📍 Jundiaí e São Paulo</span>
               </div>
             </div>
 
