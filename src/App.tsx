@@ -81,13 +81,23 @@ export default function App() {
   // Finance configuration parameters
   const [financeSettings, setFinanceSettings] = useState(() => {
     const saved = localStorage.getItem('cleanhost_finance_settings');
-    return saved ? JSON.parse(saved) : {
+    const defaults = {
       pixKey: 'cleanhost.oficial@gmail.com',
       standardTax: 12,
       loyaltyTax: 5,
       recipientAccount: 'CleanHost Hold S.A. - Banco Cora IP',
-      autoRepassActive: true
+      autoRepassActive: true,
+      cleanerFee: 5,
+      supportFee: 3
     };
+    if (saved) {
+      try {
+        return { ...defaults, ...JSON.parse(saved) };
+      } catch (e) {
+        return defaults;
+      }
+    }
+    return defaults;
   });
 
   // Finance transactions logs with security signatures and timestamps
@@ -642,6 +652,10 @@ export default function App() {
     setProfessionals(prev => prev.map(p => p.id === cleanerId ? { ...p, ...updates } : p));
   };
 
+  const handleUpdateSupportProfessionalInfo = (profId: string, updates: Partial<SupportProfessional>) => {
+    setSupportProfessionals(prev => prev.map(p => p.id === profId ? { ...p, ...updates } : p));
+  };
+
   const handleAddProfessional = (newClean: Professional) => {
     setProfessionals(prev => [...prev, newClean]);
   };
@@ -832,7 +846,7 @@ export default function App() {
                 {userRole === 'HOST' && 'Painel do Anfitrião \u2022 Gerencie propriedades, agende faxinas e visualize checklists de entrega.'}
                 {userRole === 'CLEANER' && 'Espaço do Profissional \u2022 Gerencie sua agenda de faxinas, atualize as etapas de entrega e acompanhe seus ganhos.'}
                 {userRole === 'SUPPORT' && 'Rede de Apoio Técnico \u2022 Visualize pedidos de reparos urgentes e envie propostas de orçamentos rápidos.'}
-                {userRole === 'ADMIN' && 'Painel do Sócio-Administrador \u2022 Monitore o faturamento, controle da base de dados e homologação de novos profissionais.'}
+                {userRole === 'ADMIN' && 'Painel do Rossi Admin \u2022 Monitore o faturamento, controle da base de dados e homologação de novos profissionais.'}
               </span>
             </div>
 
@@ -944,7 +958,7 @@ export default function App() {
                   </div>
                   <div>
                     <h2 className="text-sm font-black text-[#0B1F33] flex items-center gap-1.5 leading-none">
-                      🔒 Acesso Master Sócio-Administrador
+                      🔒 Acesso Master Rossi Admin
                     </h2>
                     <p className="text-[10px] text-gray-500 font-medium mt-1">Como Administrador, você possui permissão total para transitar e testar todas as áreas e telas do aplicativo.</p>
                   </div>
@@ -1044,6 +1058,7 @@ export default function App() {
                 requests={requests}
                 onUpdateRequest={handleUpdateRequest}
                 onUpdateCleanerInfo={handleUpdateCleanerInfo}
+                financeSettings={financeSettings}
               />
             )}
 
@@ -1055,6 +1070,8 @@ export default function App() {
                 onAddSupportJob={handleAddSupportJob}
                 onUpdateSupportJob={handleUpdateSupportJob}
                 onAddSupportProfessional={handleAddSupportProfessional}
+                onUpdateSupportProfessionalInfo={handleUpdateSupportProfessionalInfo}
+                financeSettings={financeSettings}
                 activeRole={loggedInUser.role === 'ADMIN' ? 'SUPPORT' : userRole}
               />
             )}
@@ -1065,6 +1082,7 @@ export default function App() {
                 professionals={professionals}
                 requests={requests}
                 supportJobs={supportJobs}
+                existingSupportProfessionals={supportProfessionals}
                 onUpdateRequest={handleUpdateRequest}
                 onUpdateCleanerInfo={handleUpdateCleanerInfo}
                 onAddProfessional={handleAddProfessional}

@@ -11,6 +11,7 @@ interface AdminSectionProps {
   professionals: Professional[];
   requests: CleaningRequest[];
   supportJobs?: SupportJob[];
+  existingSupportProfessionals?: any[];
   onUpdateRequest: (reqId: string, updates: Partial<CleaningRequest>) => void;
   onUpdateCleanerInfo: (cleanerId: string, updates: Partial<Professional>) => void;
   onAddProfessional: (prof: Professional) => void;
@@ -29,6 +30,7 @@ export default function AdminSection({
   requests = [],
   supportJobs = [],
   professionals = [],
+  existingSupportProfessionals = [],
   onUpdateRegisteredUserStatus,
   onUpdateRequest,
   onUpdateCleanerInfo,
@@ -312,7 +314,7 @@ export default function AdminSection({
         <div>
           <h1 className="text-xl font-bold text-[#0B1F33] tracking-tight flex items-center gap-2 font-display uppercase">
             <Award className="w-5 h-5 text-[#0A66FF]" />
-            Painel Sócio-Administrador HQ
+            Painel Rossi Admin
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             Controle gerencial corporativo, auditoria de receitas consolidadas e métricas da plataforma.
@@ -951,8 +953,127 @@ export default function AdminSection({
         </div>
       )}
 
-      {adminTab === 'finance' && (
-        <div className="space-y-6" id="finance-section-container">
+      {adminTab === 'finance' && (() => {
+        const promoCleanerFee = financeSettings.cleanerFee ?? 5;
+        const promoSupportFee = financeSettings.supportFee ?? 3;
+
+        // Eligible professionals: current cycle has 10 completed jobs, so their next service has 0% fee (modulo 11 is 10)
+        const eligibleCleaners = professionals.filter(p => (p.totalServices % 11) === 10).length;
+        const eligibleSupport = existingSupportProfessionals.filter(s => (s.completedJobs % 11) === 10).length;
+        const totalEligible = eligibleCleaners + eligibleSupport;
+
+        // Free operations granted (fee is 0%)
+        const freeCleanings = requests.filter(r => r.status === RequestStatus.COMPLETED && r.appFee === 0).length;
+        const freeSupport = supportJobs.filter(j => j.status === 'Concluído' && j.appFee === 0).length;
+        const totalFreeGranted = freeCleanings + freeSupport;
+
+        const safeRequests = requests;
+        const safeSupportJobs = supportJobs;
+
+        return (
+          <div className="space-y-6" id="finance-section-container">
+            
+            {/* INDICADORES REAIS DO PROGRAMA DE FIDELIDADE & CAMPANHA */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4" id="campaign-stats-grid">
+              <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-3xs space-y-2">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Taxas Promocionais Atuais</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-[#0B1F33]">{promoCleanerFee}% / {promoSupportFee}%</span>
+                </div>
+                <p className="text-[11px] text-slate-500">Limpeza: {promoCleanerFee}% • Apoio: {promoSupportFee}%</p>
+              </div>
+
+              <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-3xs space-y-2">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block font-sans">Profissionais Elegíveis (Taxa Zero)</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-[#0B1F33]">{totalEligible}</span>
+                  <span className="text-xs text-emerald-600 font-bold font-sans">parceiros</span>
+                </div>
+                <p className="text-[11px] text-slate-500">Completaram o ciclo de 10 chamados e terão taxa 0%.</p>
+              </div>
+
+              <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-3xs space-y-2">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block font-sans">Isenções de Taxas Concedidas</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-[#0B1F33]">{totalFreeGranted}</span>
+                  <span className="text-xs text-indigo-600 font-bold font-sans">operações</span>
+                </div>
+                <p className="text-[11px] text-slate-500">Total de serviços com 0% de intermediação.</p>
+              </div>
+            </div>
+
+            {/* CONFIGURAÇÃO DE TAXAS DE LANÇAMENTO */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-3xs space-y-4" id="fee-configuration-card">
+              <div className="flex justify-between items-center pb-2 border-b">
+                <div>
+                  <h3 className="font-bold text-sm text-[#0B1F33] uppercase flex items-center gap-1.5 font-display tracking-tight">
+                    <DollarSign className="w-4 h-4 text-[#12D6C5]" />
+                    Taxas de Intermediação de Lançamento
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Configure os percentuais de intermediação temporária cobrados pela CleanHost.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-[#0B1F33]">Profissionais de Limpeza (Cleaners)</span>
+                    <span className="bg-emerald-100 text-emerald-850 text-xs font-extrabold px-2.5 py-0.5 rounded-full font-mono">
+                      {promoCleanerFee}%
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 border-none pb-0">Arraste para alterar o percentual de cobrança das faxinas.</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="20"
+                      step="1"
+                      value={promoCleanerFee}
+                      onChange={(e) => {
+                        if (onChangeFinanceSettings) {
+                          onChangeFinanceSettings({
+                            ...financeSettings,
+                            cleanerFee: Number(e.target.value)
+                          });
+                        }
+                      }}
+                      className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600 focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-[#0B1F33]">Rede de Apoio (Suporte Técnico)</span>
+                    <span className="bg-indigo-100 text-indigo-850 text-xs font-extrabold px-2.5 py-0.5 rounded-full font-mono">
+                      {promoSupportFee}%
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 border-none pb-0">Arraste para alterar o percentual de cobrança de chamados de apoio.</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="20"
+                      step="1"
+                      value={promoSupportFee}
+                      onChange={(e) => {
+                        if (onChangeFinanceSettings) {
+                          onChangeFinanceSettings({
+                            ...financeSettings,
+                            supportFee: Number(e.target.value)
+                          });
+                        }
+                      }}
+                      className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           
           {/* PIX KEY CONFIGURATION FOR CLEANHOST */}
           <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-3xs space-y-4">
@@ -1111,7 +1232,7 @@ export default function AdminSection({
                         <td className="py-4 px-4 font-mono font-black text-2xs">
                           <div className="space-y-1">
                             <div className="text-[#0B1F33]">Bruto: <span className="text-sm">R$ {grossValue.toFixed(2)}</span></div>
-                            <div className="text-rose-600 text-[10px]">Taxa: - R$ {taxRate.toFixed(2)} ({req.appFee === grossValue * 0.05 ? '5%' : '12%'})</div>
+                            <div className="text-rose-600 text-[10px]">Taxa: - R$ {taxRate.toFixed(2)} ({grossValue > 0 ? Math.round((taxRate / grossValue) * 100) : 12}%)</div>
                             <div className="text-emerald-600">Líquido Cleaner: R$ {netValue.toFixed(2)}</div>
                           </div>
                         </td>
@@ -1373,7 +1494,8 @@ export default function AdminSection({
             </div>
           </div>
         </div>
-      )}
+      );
+    })()}
 
       {adminTab === 'cities' && (() => {
         // Live Cities structure with real counters

@@ -209,11 +209,11 @@ export default function AuthScreen({
 
     const lowerEmail = loginEmail.toLowerCase();
 
-    // Sócio-Administrador bypass ONLY for the official database admin email
+    // Rossi Admin bypass ONLY for the official database admin email
     if (lowerEmail === 'cleanhost.oficial@gmail.com') {
       onLoginSuccess({
         id: 'admin-master',
-        name: 'Sócio-Administrador HQ',
+        name: 'Rossi Admin',
         role: 'ADMIN',
         email: lowerEmail,
         extra: { isSuperAdmin: true }
@@ -544,7 +544,7 @@ export default function AuthScreen({
             <span className="text-lg text-[#12D6C5]">🎁</span>
             <div>
               <h4 className="text-xs font-bold text-white font-display">Programa de Fidelidade</h4>
-              <p className="text-[10px] text-slate-300 leading-tight">Reduza sua taxa de intermediação operacional de 12% para apenas 5%.</p>
+              <p className="text-[10px] text-slate-300 leading-tight">Ciclo de 10 chamados garante o 11º serviço técnico ou de faxina com taxa ZERO!</p>
             </div>
           </div>
         </div>
@@ -960,8 +960,38 @@ export default function AuthScreen({
 
                   {/* PROFISSIONAL DE LIMPEZA DETAILS */}
                   {selectedRegRole === 'CLEANER' && (
-                    <div className="space-y-3 bg-emerald-500/5 p-4 rounded-2xl border border-emerald-100">
-                      <span className="text-[10px] uppercase font-bold text-emerald-700 block tracking-wider">Passo 2: Suas Regiões, Tarifas &amp; Pix (Todos os Dados)</span>
+                    <div className="space-y-4">
+                      {/* 🎁 Programa Fidelidade CleanHost public content section */}
+                      <div className="bg-emerald-600 text-white p-5 rounded-3xl border border-emerald-500 shadow-3xs space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">🎁</span>
+                          <h4 className="text-sm font-black font-display text-white">Programa Fidelidade CleanHost</h4>
+                        </div>
+                        <p className="text-xs text-white leading-relaxed font-semibold">
+                          A cada 10 serviços concluídos pela plataforma, o próximo serviço será realizado sem taxa de intermediação.
+                        </p>
+                        <p className="text-[11px] text-emerald-100 leading-tight font-sans">
+                          Quanto mais você trabalha, mais benefícios recebe.
+                        </p>
+                        
+                        {/* EXEMPLO VISUAL */}
+                        <div className="bg-slate-950/30 p-4 rounded-2xl border border-white/10 space-y-2 mt-1">
+                          <span className="text-[9px] uppercase font-mono tracking-widest text-[#12D6C5] block font-bold">Exemplo Visual</span>
+                          <div className="flex flex-col sm:flex-row justify-between sm:items-center text-xs gap-2 pt-1 border-t border-white/5">
+                            <div className="space-y-0.5">
+                              <span className="block font-black text-[#12D6C5] font-mono text-sm leading-none">10 de 10</span>
+                              <span className="text-[9px] text-emerald-200 font-bold">serviços concluídos</span>
+                            </div>
+                            <div className="sm:text-right">
+                              <span className="text-emerald-100 font-black block">🎁 Próximo serviço = Taxa Zero</span>
+                              <span className="text-[9px] text-white/70 italic block">O contador reinicia automaticamente.</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 bg-emerald-500/5 p-4 rounded-2xl border border-emerald-100">
+                        <span className="text-[10px] uppercase font-bold text-emerald-700 block tracking-wider">Passo 2: Suas Regiões, Tarifas &amp; Pix (Todos os Dados)</span>
                       
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
@@ -1025,6 +1055,7 @@ export default function AuthScreen({
                           ))}
                         </div>
                       </div>
+                    </div>
                     </div>
                   )}
 

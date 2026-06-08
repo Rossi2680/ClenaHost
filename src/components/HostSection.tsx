@@ -238,12 +238,11 @@ export default function HostSection({
 
     const price = wizType === CleaningType.EXPRESS ? selectedProf.priceExpress : selectedProf.priceStandard;
     
-    // Loyalty tier: after 10 completed cleanings, professional gets reduced fee of 5% instead of 12%
-    // We display this in the receipt.
-    const hasLoyalty = selectedProf.totalServices >= 10;
-    const stdTax = financeSettings?.standardTax ?? 12;
-    const loyalTax = financeSettings?.loyaltyTax ?? 5;
-    const rate = hasLoyalty ? (loyalTax / 100) : (stdTax / 100);
+    // Loyalty tier: after 10 completed cleanings, professional gets 11th service with 0% fee (modulo 11 cycle)
+    const completedCycle = selectedProf.totalServices % 11;
+    const isZeroTax = completedCycle === 10;
+    const promoFee = financeSettings?.cleanerFee ?? 5;
+    const rate = isZeroTax ? 0 : (promoFee / 100);
     const appFee = price * rate;
     const netValue = price - appFee;
     const selectedProp = properties.find(p => p.id === wizPropertyId)!;
@@ -281,7 +280,7 @@ export default function HostSection({
       onRecordFinanceLog({
         id: `TX-LOG-${Math.floor(10000 + Math.random() * 90000)}`,
         dateTime: new Date().toISOString(),
-        action: `Retenção Taxa Intermediação (${hasLoyalty ? loyalTax : stdTax}%)`,
+        action: `Retenção Taxa Intermediação (${isZeroTax ? 0 : promoFee}%)`,
         value: price,
         taxApplied: appFee,
         recipient: selectedProf.name,

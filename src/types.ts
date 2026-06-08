@@ -84,6 +84,8 @@ export interface SupportJob {
     transferTime: string;
     adminResponsible: string;
   };
+  appFee?: number;
+  netValue?: number;
 }
 
 export interface CleaningRequest {
@@ -99,7 +101,7 @@ export interface CleaningRequest {
   professionalName?: string;
   professionalPhoto?: string;
   price: number;
-  appFee: number; // 12% standard or 5% if loyalty active
+  appFee: number; // Configured standard/promotional fee, or 0% during loyalty 11th service
   netValue: number;
   beforePhotos: string[];
   afterPhotos: string[];

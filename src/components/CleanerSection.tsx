@@ -11,6 +11,7 @@ interface CleanerSectionProps {
   requests: CleaningRequest[];
   onUpdateRequest: (reqId: string, updates: Partial<CleaningRequest>) => void;
   onUpdateCleanerInfo: (cleanerId: string, updates: Partial<Professional>) => void;
+  financeSettings?: any;
 }
 
 export default function CleanerSection({
@@ -18,7 +19,8 @@ export default function CleanerSection({
   activeCleanerId,
   requests,
   onUpdateRequest,
-  onUpdateCleanerInfo
+  onUpdateCleanerInfo,
+  financeSettings
 }: CleanerSectionProps) {
   const currentCleaner = professionals.find(p => p.id === activeCleanerId) || professionals[0];
   const [editingPix, setEditingPix] = useState(false);
@@ -30,14 +32,94 @@ export default function CleanerSection({
 
   if (!currentCleaner) {
     return (
-      <div className="bg-white border border-slate-200/80 p-8 rounded-3xl shadow-sm text-center max-w-lg mx-auto my-12 space-y-4">
-        <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-2xl border border-emerald-100">
-          🧹
+      <div className="space-y-6" id="cleaner-how-it-works-view">
+        {/* SIMULADOR HEADER OR MAIN CARD */}
+        <div className="bg-[#0B1F33] text-white p-6 sm:p-8 rounded-3xl relative overflow-hidden shadow-sm" id="public-cleaner-loyalty-panel">
+          <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 text-white/5 font-black text-8xl pointer-events-none">10</div>
+          
+          <div className="space-y-4">
+            <div>
+              <span className="text-[10px] text-[#12D6C5] font-mono font-bold tracking-widest uppercase block animate-pulse">Simulador - Visão do Prestador</span>
+              <h3 className="text-xl font-bold font-display tracking-tight text-white mt-1">Como Cleaner / Faxina na CleanHost</h3>
+              <p className="text-xs text-slate-300 mt-1 leading-relaxed max-w-2xl">
+                Seja bem-vindo à rede de parceiros CleanHost. Caso queira simular a visão operacional (agenda, serviços e repasses), cadastre um profissional de limpeza na aba de cadastro ou no topo em "Criar Nova Conta" com a opção <strong>"Cleaner / Faxina"</strong>.
+              </p>
+            </div>
+
+            {/* 🎁 Programa Fidelidade CleanHost Section */}
+            <div className="bg-emerald-500/10 border border-emerald-500/30 p-5 sm:p-6 rounded-2xl space-y-4" id="intro-cleaner-loyalty-section">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🎁</span>
+                <h4 className="text-sm font-black font-display text-emerald-400">🎁 Programa Fidelidade CleanHost</h4>
+              </div>
+              
+              <div className="space-y-2 text-xs text-slate-200 leading-relaxed font-sans">
+                <p className="font-bold text-slate-100">
+                  A cada 10 serviços concluídos pela plataforma, o próximo serviço será realizado sem taxa de intermediação.
+                </p>
+                <p className="text-slate-300">
+                  Quanto mais você trabalha, mais benefícios recebe.
+                </p>
+              </div>
+
+              {/* EXEMPLO VISUAL */}
+              <div className="bg-slate-950/40 p-4 rounded-xl border border-white/5 space-y-3">
+                <span className="text-[9px] uppercase font-mono tracking-widest text-[#12D6C5] block font-bold">Exemplo Visual</span>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-bold font-mono">10 serviços concluídos:</span>
+                    <div className="text-sm font-mono tracking-[0.25em] text-[#12D6C5]">
+                      ■■■■■■■■■■
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-1">
+                    <span className="text-xs font-bold text-slate-100 block">🎁 Próximo serviço = Taxa Zero</span>
+                    <p className="text-[10px] text-slate-300">
+                      O contador reinicia automaticamente.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2 text-xs text-slate-455">
+              <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800 text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Intermediação de lançamento CleanHost: <strong>{financeSettings?.cleanerFee ?? 5}%</strong></span>
+              </div>
+              <p className="italic text-slate-400">Cadastre um profissional na aba de cadastro para testar o painel interativo.</p>
+            </div>
+          </div>
         </div>
-        <h3 className="text-base font-bold text-slate-800">Painel do Cleaner Indisponível</h3>
-        <p className="text-xs text-slate-500 leading-relaxed font-medium">
-          Nenhum profissional de limpeza cadastrado ou aprovado no momento. Cadastre um novo cleaner ou aguarde inscrições de profissionais reais para simular este painel.
-        </p>
+
+        {/* EXTRA PROMOTIONAL BODY CARDS FOR CLEANER ACCREDITATION */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4" id="cleaner-features-promo-grid">
+          <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-3xs space-y-2">
+            <span className="text-lg">💰</span>
+            <h4 className="text-xs font-bold text-[#0B1F33] font-display">Recebimento via Pix</h4>
+            <p className="text-[11px] text-slate-500 leading-normal">
+              Repasses automáticos ou em apenas alguns cliques direto para sua chave cadastrada sem burocracias.
+            </p>
+          </div>
+
+          <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-3xs space-y-2">
+            <span className="text-lg">📍</span>
+            <h4 className="text-xs font-bold text-[#0B1F33] font-display">Sua Região, Suas Regras</h4>
+            <p className="text-[11px] text-slate-500 leading-normal">
+              Selecione os bairros que você atende e defina seus próprios preços padrão e expresso na plataforma.
+            </p>
+          </div>
+
+          <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-3xs space-y-2">
+            <span className="text-lg">⭐</span>
+            <h4 className="text-xs font-bold text-[#0B1F33] font-display">Destaque Extra</h4>
+            <p className="text-[11px] text-slate-500 leading-normal">
+              Seja avaliado com 5 estrelas pelos anfitriões para se tornar Super Cleaner com preferência em chamados urgentes.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -80,9 +162,10 @@ export default function CleanerSection({
 
   // Loyalty calculations
   const servicesCompleted = currentCleaner.totalServices;
+  const completedInCycle = servicesCompleted % 11;
   const nextTarget = 10;
-  const isEligibleForLoyalty = servicesCompleted >= nextTarget;
-  const progressPercent = Math.min((servicesCompleted / nextTarget) * 100, 100);
+  const isEligibleForLoyalty = completedInCycle === 10;
+  const progressPercent = Math.min((completedInCycle / nextTarget) * 100, 100);
 
   // Process operational steps for the active job
   const handleNextStatus = () => {
@@ -198,43 +281,53 @@ export default function CleanerSection({
       </div>
 
       {/* Fidelity Loyalty progress Card */}
-      <div className="bg-[#0B1F33] text-white p-6 rounded-3xl relative overflow-hidden shadow-md">
-        <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 text-white/5 font-black text-8xl pointer-events-none">11</div>
-        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 bg-brand-blue rounded text-[9px] font-bold uppercase tracking-wider text-white">Programa de Fidelidade CleanHost</span>
-              <span className="text-[10px] text-[#12D6C5] font-semibold">Desconto operacional exclusivo</span>
+      <div className="bg-[#0B1F33] text-white p-6 rounded-3xl relative overflow-hidden shadow-md" id="cleaner-loyalty-card">
+        <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 text-white/5 font-black text-8xl pointer-events-none">10</div>
+        
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 bg-emerald-600 rounded-lg text-[9px] font-bold uppercase tracking-wider text-white">🎁 Programa Fidelidade CleanHost</span>
+            <span className="text-[10px] text-[#12D6C5] font-mono font-bold uppercase tracking-wider">Benefício Automático</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            <div className="space-y-2">
+              <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-bold font-mono">Serviços concluídos:</span>
+              <span className="text-3xl font-black text-[#12D6C5] font-mono leading-none">
+                {completedInCycle} <span className="text-sm text-slate-500 font-normal">de 10</span>
+              </span>
             </div>
-            <h4 className="text-lg font-bold mt-1">Taxas reduzidas de 12% para apenas 5%</h4>
-            <p className="text-[#F4F7FA]/75 text-xs mt-1">
-              Após completar 10 faxinas na plataforma, a sua 11ª operação e as seguintes contam com repasse acelerado!
-            </p>
+
+            <div className="space-y-1">
+              <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-bold font-mono font-sans">Próximo benefício:</span>
+              <p className="text-xs font-bold text-slate-200">
+                Serviço sem taxa de intermediação.
+              </p>
+            </div>
           </div>
 
-          <div className="text-right flex-shrink-0">
-            <span className="text-[11px] block text-gray-400">Progresso</span>
-            <span className="text-2xl font-black text-[#12D6C5] font-mono">{servicesCompleted} / {nextTarget}</span>
-            <span className="text-[10px] block text-gray-400">faxinas com sucesso</span>
+          {/* Progress bar as visual square characters */}
+          <div className="space-y-2 pt-2 border-t border-slate-850">
+            <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block font-bold">Barra de progresso:</span>
+            <div className="text-lg font-mono tracking-[0.25em] text-[#12D6C5] bg-slate-950/40 p-3 rounded-xl inline-block border border-slate-800">
+              {(() => {
+                const activeCount = Math.min(completedInCycle, 10);
+                const inactiveCount = 10 - activeCount;
+                return '■'.repeat(activeCount) + '□'.repeat(inactiveCount);
+              })()}
+            </div>
           </div>
-        </div>
 
-        {/* Progress bar visual */}
-        <div className="space-y-1">
-          <div className="w-full bg-slate-700/60 rounded-full h-3">
-            <div 
-              className="bg-[#12D6C5] h-3 rounded-full transition-all duration-500" 
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-mono">
-            <span>Início (Taxa 12%)</span>
-            {isEligibleForLoyalty ? (
-              <span className="text-[#12D6C5] font-bold">💎 Parabéns! Suas próximas taxas estão reduzidas para 5%</span>
-            ) : (
-              <span>Falta {nextTarget - servicesCompleted} limpezas para bater a meta e reter 5%!</span>
-            )}
-          </div>
+          {/* Highlight when reaching 10 services */}
+          {completedInCycle === 10 && (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-2xl flex flex-col items-center text-center space-y-1 animate-bounce" id="loyalty-complete-congrats">
+              <span className="text-2xl">🎉</span>
+              <h5 className="text-sm font-black text-emerald-400 font-display">🎉 Parabéns!</h5>
+              <p className="text-xs text-emerald-100 font-medium">
+                Você desbloqueou uma operação com taxa zero.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

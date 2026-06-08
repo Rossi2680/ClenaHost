@@ -12,6 +12,8 @@ interface SupportSectionProps {
   onAddSupportJob: (job: SupportJob) => void;
   onUpdateSupportJob: (jobId: string, updates: Partial<SupportJob>) => void;
   onAddSupportProfessional: (prof: SupportProfessional) => void;
+  onUpdateSupportProfessionalInfo?: (profId: string, updates: Partial<SupportProfessional>) => void;
+  financeSettings?: any;
   activeRole: 'HOST' | 'CLEANER' | 'ADMIN' | 'SUPPORT';
 }
 
@@ -22,6 +24,8 @@ export default function SupportSection({
   onAddSupportJob,
   onUpdateSupportJob,
   onAddSupportProfessional,
+  onUpdateSupportProfessionalInfo,
+  financeSettings,
   activeRole
 }: SupportSectionProps) {
   const [activeTab, setActiveTab] = useState<'directory' | 'my-orders' | 'register-provider'>('directory');
@@ -41,6 +45,7 @@ export default function SupportSection({
 
   // Submit Quote State for Tech role
   const [quotePrices, setQuotePrices] = useState<Record<string, number>>({});
+  const [activeSupId, setActiveSupId] = useState<string>('');
 
   const handleCreateRequest = (prof: SupportProfessional) => {
     if (properties.length === 0) {
@@ -132,10 +137,30 @@ export default function SupportSection({
   };
 
   const handleCompleteJob = (job: SupportJob, prov: SupportProfessional) => {
+    const completedCycle = prov ? prov.completedJobs % 11 : 0;
+    const isZeroTax = completedCycle === 10;
+    const promoFee = financeSettings?.supportFee ?? 3;
+    const rate = isZeroTax ? 0 : (promoFee / 100);
+    const appFee = job.quotedValue * rate;
+    const netValue = job.quotedValue - appFee;
+
     onUpdateSupportJob(job.id, {
-      status: 'Concluído'
+      status: 'Concluído',
+      appFee,
+      netValue
     });
-    alert(`Operação encerrada no aplicativo! A CleanHost registrou o serviço. Repasse retido de 10% (Fidelidade: 11º reduz para 5%).`);
+
+    if (prov && onUpdateSupportProfessionalInfo) {
+      onUpdateSupportProfessionalInfo(prov.id, {
+        completedJobs: prov.completedJobs + 1
+      });
+    }
+
+    if (isZeroTax) {
+      alert(`Operação encerrada no aplicativo! A CleanHost registrou o serviço. Benefício Fidelidade Concedido: intermediação com taxa ZERO (0%)! Valor total de R$ ${job.quotedValue.toFixed(2)} transferido integralmente para o parceiro.`);
+    } else {
+      alert(`Operação encerrada no aplicativo! A CleanHost registrou o serviço. Taxa promocional de intermediação de ${promoFee}% retida: R$ ${appFee.toFixed(2)}. Valor repassado: R$ ${netValue.toFixed(2)}.`);
+    }
   };
 
   const getIconForCategory = (cat: string) => {
@@ -153,6 +178,83 @@ export default function SupportSection({
 
   return (
     <div className="space-y-6">
+
+      {activeRole === 'SUPPORT' && (
+        <div className="bg-[#0B1F33] text-white p-6 rounded-3xl relative overflow-hidden shadow-md space-y-4" id="support-loyalty-panel">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/50">
+            <div>
+              <span className="text-[10px] text-[#12D6C5] font-mono font-bold tracking-widest uppercase block">Simulador - Visão do Prestador</span>
+              <h4 className="text-sm font-bold">Programa Fidelidade CleanHost</h4>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-bold text-gray-305">Selecionar Prestador:</label>
+              <select
+                value={activeSupId || (supportProfessionals[0]?.id || '')}
+                onChange={(e) => setActiveSupId(e.target.value)}
+                className="bg-slate-800 text-white border border-slate-700 text-xs font-bold rounded-xl px-2.5 py-1.5 focus:outline-hidden"
+              >
+                {supportProfessionals.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.category})</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {(() => {
+            const currentSupId = activeSupId || (supportProfessionals[0]?.id || '');
+            const activeSup = supportProfessionals.find(p => p.id === currentSupId);
+            if (!activeSup) {
+              return (
+                <p className="text-xs text-slate-400 italic">Cadastre um profissional técnico na aba de cadastro para simular o programa de fidelidade.</p>
+              );
+            }
+            const completedInCycle = activeSup.completedJobs % 11;
+            const nextTarget = 10;
+            const isEligible = completedInCycle === 10;
+            const progressPct = Math.min((completedInCycle / nextTarget) * 100, 100);
+            return (
+              <div className="space-y-4">
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-brand-blue rounded text-[9px] font-bold uppercase tracking-wider text-white">Programa Fidelidade CleanHost</span>
+                      <span className="text-[10px] text-[#12D6C5] font-semibold">Tabela de Serviços Emergenciais</span>
+                    </div>
+                    <h5 className="text-base font-bold mt-1 text-slate-100">Meta: Conclua 10 reparos para liberar a 11ª operação livre de taxas!</h5>
+                    <p className="text-[#F4F7FA]/75 text-xs">
+                      Sua taxa promocional padrão é de apenas <strong>{financeSettings?.supportFee ?? 3}%</strong>. Ao completar o ciclo de 10 chamados, a 11ª operação de orçamento aprovado terá taxa de intermediação de de crucial <strong>0%</strong>!
+                    </p>
+                  </div>
+
+                  <div className="text-right flex-shrink-0">
+                    <span className="text-[11px] block text-gray-400">Progresso do Ciclo</span>
+                    <span className="text-2xl font-black text-[#12D6C5] font-mono">{completedInCycle} de 10</span>
+                    <span className="text-[10px] block text-gray-400">chamados concluídos</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="w-full bg-slate-700/60 rounded-full h-3">
+                    <div 
+                      className="bg-[#12D6C5] h-3 rounded-full transition-all duration-500" 
+                      style={{ width: `${progressPct}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-mono font-bold">
+                    <span>Progresso atual: {completedInCycle}/11</span>
+                    {isEligible ? (
+                      <span className="text-[#12D6C5]">🔥 Sensacional! Seu próximo chamado técnico terá taxa 100% Gratuita!</span>
+                    ) : (
+                      <span className="text-amber-400">Faltam {10 - completedInCycle} serviços para ganhar uma operação sem taxa.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
       
       {/* Tab controls */}
       <div className="flex bg-white p-1 rounded-3xl shadow-xs border border-blue-50 gap-2">
@@ -328,8 +430,11 @@ export default function SupportSection({
               {supportJobs.map(job => {
                 const prov = supportProfessionals.find(p => p.id === job.professionalId)!;
                 const prop = properties.find(p => p.id === job.propertyId);
-                const isLoyaltyReduced = prov ? prov.completedJobs >= 10 : false;
-                const systemFeeValue = job.quotedValue * (isLoyaltyReduced ? 0.05 : 0.10);
+                const completedCycle = prov ? prov.completedJobs % 11 : 0;
+                const isZeroTax = completedCycle === 10;
+                const promoFee = financeSettings?.supportFee ?? 3;
+                const systemFeePct = isZeroTax ? 0 : promoFee;
+                const systemFeeValue = job.quotedValue * (systemFeePct / 100);
 
                 return (
                   <div key={job.id} className="border border-gray-100 rounded-2xl p-4 bg-slate-50 relative flex flex-col justify-between">
@@ -366,7 +471,7 @@ export default function SupportSection({
                             {job.quotedValue > 0 ? (
                               <div>
                                 <span className="text-black text-xs block font-bold">R$ {job.quotedValue.toFixed(2)}</span>
-                                <span className="text-[9px] text-[#12D6C5] font-semibold">Taxa Intermediação CleanHost (10%): R$ {systemFeeValue.toFixed(2)}</span>
+                                <span className="text-[9px] text-[#12D6C5] font-semibold">Taxa Intermediação CleanHost ({systemFeePct}%): R$ {systemFeeValue.toFixed(2)}</span>
                               </div>
                             ) : (
                               <span className="text-[10px] text-amber-600 italic font-bold">Aguardando cotação comercial...</span>
