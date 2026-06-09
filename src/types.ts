@@ -66,6 +66,47 @@ export interface SupportProfessional {
   bank?: string;
   estimatedPriceRange: string;
   logoColor: string;
+  photoUrl?: string;
+  status?: 'Disponível' | 'Ocupado';
+  joinedDate?: string;
+  biography?: string;
+  reviews?: {
+    id: string;
+    raterName: string;
+    rating: number;
+    comment: string;
+    date: string;
+  }[];
+  whatsapp?: string;
+  email?: string;
+  specialties?: string;
+  yearsOfExperience?: number;
+  city?: string;
+  state?: string;
+  pixHolderName?: string;
+  notificationPrefs?: {
+    platform: boolean;
+    whatsapp: boolean;
+    email: boolean;
+    sms: boolean;
+  };
+}
+
+export interface SupportNotification {
+  id: string;
+  jobId: string;
+  professionalId: string;
+  title: string;
+  message: string;
+  sentChannels: {
+    platform: boolean;
+    whatsapp: boolean;
+    email: boolean;
+    sms: boolean;
+  };
+  status: 'sent' | 'pending' | 'failed';
+  createdAt: string;
+  read: boolean;
 }
 
 export interface SupportJob {
@@ -76,8 +117,12 @@ export interface SupportJob {
   propertyId: string;
   description: string;
   quotedValue: number;
-  status: 'Solicitado' | 'Orçado' | 'Aceito' | 'Concluído';
+  status: 'Solicitado' | 'Orçado' | 'Aceito' | 'Concluído' | 'Pendente' | 'Em andamento' | 'Cancelado';
   date: string;
+  time?: string;
+  notes?: string;
+  propertyName?: string;
+  propertyAddress?: string;
   financialStatus?: string;
   transferInfo?: {
     transferDate: string;
@@ -86,6 +131,11 @@ export interface SupportJob {
   };
   appFee?: number;
   netValue?: number;
+  review?: {
+    rating: number;
+    comment: string;
+    date: string;
+  };
 }
 
 export interface CleaningRequest {

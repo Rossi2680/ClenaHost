@@ -524,25 +524,7 @@ export default function AuthScreen({
           </div>
         </div>
 
-        {/* 🚀 Bloco Fase de Lançamento */}
-        <div className="bg-white/10 border border-white/10 p-4 rounded-2xl space-y-2 relative z-10 mt-4">
-          <h4 className="text-xs font-black text-[#12D6C5] flex items-center gap-1.5 font-display uppercase tracking-wider">
-            🚀 Fase de Lançamento CleanHost
-          </h4>
-          <p className="text-[11px] text-slate-200 leading-normal">
-            Os primeiros usuários participarão da construção da plataforma e terão acesso aos benefícios e taxas reduzidas da fase inicial.
-          </p>
-          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5 text-[9px] font-mono text-slate-300">
-            <div>
-              <span className="block text-slate-400 font-sans uppercase">Taxa Parcerias Faxina:</span>
-              <strong className="text-white text-xs">{financeSettings?.cleanerFee ?? 5}%</strong>
-            </div>
-            <div>
-              <span className="block text-slate-400 font-sans uppercase">Taxa Apoio Técnico:</span>
-              <strong className="text-white text-xs">{financeSettings?.supportFee ?? 3}%</strong>
-            </div>
-          </div>
-        </div>
+
 
         {/* Dynamic tips inside dark panel */}
         <div className="mt-4 pt-4 border-t border-white/10 space-y-3 relative z-10">

@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { 
   Plus, Home, Calendar, Sparkles, Star, MapPin, Clock, Shield, Play, 
   CheckCircle, MessageSquare, AlertCircle, Phone, Navigation, Award, 
-  Camera, CheckSquare, ChevronRight, X, ArrowLeft, Heart, Send, ExternalLink, Receipt
+  Camera, CheckSquare, ChevronRight, X, ArrowLeft, Heart, Send, ExternalLink, Receipt,
+  Wrench, Hammer, Sliders, Filter
 } from 'lucide-react';
-import { Property, Professional, CleaningRequest, CleaningType, RequestStatus } from '../types';
+import { Property, Professional, CleaningRequest, CleaningType, RequestStatus, SupportProfessional, SupportJob } from '../types';
 
 interface HostSectionProps {
   properties: Property[];
@@ -19,6 +20,11 @@ interface HostSectionProps {
   onRecordFinanceLog?: (log: any) => void;
   userName?: string;
   loggedInUser?: any;
+  supportProfessionals?: SupportProfessional[];
+  supportJobs?: SupportJob[];
+  onAddSupportJob?: (job: SupportJob) => void;
+  onUpdateSupportJob?: (jobId: string, updates: Partial<SupportJob>) => void;
+  onUpdateSupportProfessionalInfo?: (profId: string, updates: Partial<SupportProfessional>) => void;
 }
 
 export default function HostSection({
@@ -33,9 +39,14 @@ export default function HostSection({
   financeSettings = { standardTax: 12, loyaltyTax: 5, pixKey: 'cleanhost.oficial@gmail.com' },
   onRecordFinanceLog,
   userName = 'Anfitrião',
-  loggedInUser
+  loggedInUser,
+  supportProfessionals = [],
+  supportJobs = [],
+  onAddSupportJob,
+  onUpdateSupportJob,
+  onUpdateSupportProfessionalInfo
 }: HostSectionProps) {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'request' | 'properties' | 'tracker'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'request' | 'properties' | 'tracker' | 'support'>('dashboard');
   const [selectedRequestIdForTracker, setSelectedRequestIdForTracker] = useState<string | null>(null);
   const [payingRequestId, setPayingRequestId] = useState<string | null>(null);
   
@@ -77,12 +88,32 @@ export default function HostSection({
     { sender: 'cleaner', text: 'Boa tarde! Já estou a caminho do imóvel. Chego em 10 minutos.', time: '14:02' },
   ]);
 
+  // Support Network state
+  const [supportFilterCategory, setSupportFilterCategory] = useState<string>('All');
+  const [supportFilterCity, setSupportFilterCity] = useState<string>('All');
+  const [supportFilterRating, setSupportFilterRating] = useState<number>(0);
+  const [supportFilterAvailability, setSupportFilterAvailability] = useState<string>('All');
+  
+  const [selectedSupportProfForView, setSelectedSupportProfForView] = useState<SupportProfessional | null>(null);
+  const [hiringProf, setHiringProf] = useState<SupportProfessional | null>(null);
+  
+  // Support Hiring form fields
+  const [wizSupportPropertyId, setWizSupportPropertyId] = useState<string>('');
+  const [wizSupportDescription, setWizSupportDescription] = useState<string>('');
+  const [wizSupportDate, setWizSupportDate] = useState<string>('');
+  const [wizSupportTime, setWizSupportTime] = useState<string>('');
+  const [wizSupportNotes, setWizSupportNotes] = useState<string>('');
+
   // Review Form state
   const [tempRatingQuality, setTempRatingQuality] = useState(5);
   const [tempRatingPunct, setTempRatingPunct] = useState(5);
   const [tempRatingOrg, setTempRatingOrg] = useState(5);
   const [tempRatingComm, setTempRatingComm] = useState(5);
   const [tempComment, setTempComment] = useState('');
+
+  // Support Job Review states
+  const [supportRatings, setSupportRatings] = useState<Record<string, number>>({});
+  const [supportComments, setSupportComments] = useState<Record<string, string>>({});
 
   // Favorites state list
   const [favorites, setFavorites] = useState<string[]>(['prof-1', 'prof-4']);
@@ -356,6 +387,47 @@ export default function HostSection({
     setTempComment('');
   };
 
+  const handleRateSupportProfessional = (jobId: string, profId: string) => {
+    const rating = supportRatings[jobId] || 5;
+    const comment = supportComments[jobId]?.trim() || 'Serviço de reparo executado com excelência, recomendo!';
+
+    // 1. Update the SupportJob to include the review
+    onUpdateSupportJob?.(jobId, {
+      review: {
+        rating,
+        comment,
+        date: new Date().toLocaleDateString('pt-BR')
+      }
+    });
+
+    // 2. Find professional
+    const prof = supportProfessionals.find(p => p.id === profId);
+    if (prof) {
+      const existingReviews = prof.reviews || [];
+      const newReview = {
+        id: `REV-${Math.floor(1001 + Math.random() * 8999)}`,
+        raterName: loggedInUser?.name || userName || 'Anfitrião',
+        rating,
+        comment,
+        date: new Date().toLocaleDateString('pt-BR')
+      };
+      
+      const updatedReviews = [...existingReviews, newReview];
+      
+      // Calculate new average rating
+      const totalRatingSum = updatedReviews.reduce((sum, r) => sum + r.rating, 0);
+      const newAverageRating = Number((totalRatingSum / updatedReviews.length).toFixed(1));
+      
+      // 3. Update the professional
+      onUpdateSupportProfessionalInfo?.(profId, {
+        reviews: updatedReviews,
+        rating: newAverageRating
+      });
+    }
+
+    alert('Muito obrigado! Sua avaliação foi enviada e ajudará a ranquear o profissional técnico nas buscas.');
+  };
+
   const activeCleanings = requests.filter(r => r.status !== RequestStatus.COMPLETED);
   const completedCleanings = requests.filter(r => r.status === RequestStatus.COMPLETED);
 
@@ -397,6 +469,14 @@ export default function HostSection({
           >
             <Home className="w-4 h-4" />
             Meus Imóveis ({properties.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab('support')}
+            className={`cursor-pointer px-4 py-2.5 text-xs md:text-sm font-bold font-display rounded-2xl transition-all duration-200 flex items-center gap-1.5 ${activeTab === 'support' ? 'bg-[#0A66FF] text-white shadow-xs' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}
+          >
+            <Wrench className="w-4 h-4 text-amber-400" />
+            Rede de Apoio
           </button>
         </div>
 
@@ -1302,6 +1382,559 @@ export default function HostSection({
         </div>
       )}
 
+      {/* RENDER VIEW: REDE DE APOIO / DIRECT CONTRACTING */}
+      {activeTab === 'support' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Header Card with description */}
+          <div className="bg-[#0B1F33] p-6 rounded-3xl text-white relative overflow-hidden shadow-md">
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <span className="text-[#12D6C5] font-mono text-[10px] uppercase font-bold tracking-widest bg-white/10 px-2.5 py-1 rounded-full">
+                  Exclusivo CleanHost
+                </span>
+                <h3 className="text-xl md:text-2xl font-black font-display mt-2">🔨 Rede de Apoio Especializada</h3>
+                <p className="text-xs md:text-sm text-slate-300 mt-1 max-w-xl">
+                  Encontre e contrate eletricistas, encanadores, chaveiros, pintores e pedreiros homologados diretamente para cuidar de seus imóveis de temporada.
+                </p>
+              </div>
+              <div className="bg-white/10 p-4 rounded-2xl border border-white/15 shrink-0 text-center font-sans">
+                <span className="text-slate-400 text-[10px] block font-bold uppercase tracking-wider">Soluções Rápidas</span>
+                <span className="text-emerald-400 font-mono text-base font-black">Atendimento Seguro</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters Row */}
+          <div className="bg-white p-5 rounded-3xl border border-blue-50 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100">
+              <h4 className="font-bold text-sm text-[#0B1F33] uppercase tracking-wider flex items-center gap-1.5">
+                <Filter className="w-4 h-4 text-[#0A66FF]" />
+                Filtrar Rede de Profissionais
+              </h4>
+              <button 
+                onClick={() => {
+                  setSupportFilterCategory('All');
+                  setSupportFilterCity('All');
+                  setSupportFilterRating(0);
+                  setSupportFilterAvailability('All');
+                }}
+                className="text-xs font-semibold text-[#0A66FF] hover:underline cursor-pointer"
+              >
+                Limpar Filtros
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Category */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase">Categoria</label>
+                <select
+                  value={supportFilterCategory}
+                  onChange={(e) => setSupportFilterCategory(e.target.value)}
+                  className="w-full bg-slate-50 border border-gray-150 p-2.5 rounded-xl text-xs text-[#0B1F33] font-bold focus:outline-hidden"
+                >
+                  <option value="All">⚡ Todas as Categorias</option>
+                  <option value="Eletricista">⚡ Eletricistas</option>
+                  <option value="Encanador">🚰 Encanadores</option>
+                  <option value="Chaveiro">🔑 Chaveiros</option>
+                  <option value="Pintor">🎨 Pintores</option>
+                  <option value="Pedreiro">🧱 Pedreiros</option>
+                  <option value="Manutenção Geral">🛠️ Outros profissionais</option>
+                </select>
+              </div>
+
+              {/* City */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase">Cidade / Região</label>
+                <select
+                  value={supportFilterCity}
+                  onChange={(e) => setSupportFilterCity(e.target.value)}
+                  className="w-full bg-slate-50 border border-gray-150 p-2.5 rounded-xl text-xs text-[#0B1F33] font-bold focus:outline-hidden"
+                >
+                  <option value="All">📍 Todas as Cidades</option>
+                  <option value="Jundiaí">Jundiaí/SP</option>
+                  <option value="São Paulo">São Paulo/SP</option>
+                </select>
+              </div>
+
+              {/* Rating */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase">Avaliação Mínima</label>
+                <select
+                  value={supportFilterRating.toString()}
+                  onChange={(e) => setSupportFilterRating(Number(e.target.value))}
+                  className="w-full bg-slate-50 border border-gray-150 p-2.5 rounded-xl text-xs text-[#0B1F33] font-bold focus:outline-hidden"
+                >
+                  <option value="0">⭐ Qualquer Nota</option>
+                  <option value="4.5">⭐ 4.5 ou superior</option>
+                  <option value="4.8">⭐ 4.8 ou superior</option>
+                  <option value="5.0">⭐ Apenas Excelentes (5.0)</option>
+                </select>
+              </div>
+
+              {/* Availability */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase">Disponibilidade</label>
+                <select
+                  value={supportFilterAvailability}
+                  onChange={(e) => setSupportFilterAvailability(e.target.value)}
+                  className="w-full bg-slate-50 border border-gray-150 p-2.5 rounded-xl text-xs text-[#0B1F33] font-bold focus:outline-hidden"
+                >
+                  <option value="All">🟢 Todos os Estados</option>
+                  <option value="Disponível">Disponível</option>
+                  <option value="Ocupado">Ocupado / Em Atendimento</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Direct Contracting Grid */}
+          <div className="space-y-4">
+            <h4 className="font-bold text-base text-[#0B1F33] uppercase tracking-wider flex items-center gap-1.5">
+              <Sliders className="w-4 h-4 text-[#0fb0a3]" />
+              Profissionais Disponíveis ({
+                supportProfessionals.filter(p => {
+                  const matchCategory = supportFilterCategory === 'All' || p.category === supportFilterCategory;
+                  const matchCity = supportFilterCity === 'All' || p.region.toLowerCase().includes(supportFilterCity.toLowerCase());
+                  const matchRating = p.rating >= supportFilterRating;
+                  const matchAvailability = supportFilterAvailability === 'All' || p.status === supportFilterAvailability;
+                  return matchCategory && matchCity && matchRating && matchAvailability;
+                }).length
+              })
+            </h4>
+
+            {supportProfessionals.filter(p => {
+              const matchCategory = supportFilterCategory === 'All' || p.category === supportFilterCategory;
+              const matchCity = supportFilterCity === 'All' || p.region.toLowerCase().includes(supportFilterCity.toLowerCase());
+              const matchRating = p.rating >= supportFilterRating;
+              const matchAvailability = supportFilterAvailability === 'All' || p.status === supportFilterAvailability;
+              return matchCategory && matchCity && matchRating && matchAvailability;
+            }).length === 0 ? (
+              <div className="bg-white p-12 text-center rounded-3xl border border-dashed border-gray-200">
+                <AlertCircle className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                <p className="font-bold text-sm text-gray-500">Nenhum profissional encontrado com os filtros atuais.</p>
+                <p className="text-xs text-slate-400 mt-1">Tente expandir suas seleções para buscar outros técnicos parceiros.</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {supportProfessionals.filter(p => {
+                  const matchCategory = supportFilterCategory === 'All' || p.category === supportFilterCategory;
+                  const matchCity = supportFilterCity === 'All' || p.region.toLowerCase().includes(supportFilterCity.toLowerCase());
+                  const matchRating = p.rating >= supportFilterRating;
+                  const matchAvailability = supportFilterAvailability === 'All' || p.status === supportFilterAvailability;
+                  return matchCategory && matchCity && matchRating && matchAvailability;
+                }).map((prov) => (
+                  <div 
+                    key={prov.id}
+                    className="bg-white border border-gray-100 hover:border-blue-200 hover:scale-101 duration-200 transition-all rounded-3xl p-5 shadow-xs flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Top Row with photo, status */}
+                      <div className="flex justify-between items-start gap-2 border-b pb-3 border-slate-100 mb-3">
+                        <div className="flex items-center gap-2.5">
+                          {prov.photoUrl ? (
+                            <img 
+                              src={prov.photoUrl} 
+                              alt={prov.name} 
+                              className="w-11 h-11 rounded-xl object-cover border border-slate-100"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm uppercase ${prov.logoColor || 'bg-blue-50 text-blue-600'}`}>
+                              {prov.name.substring(0, 2)}
+                            </div>
+                          )}
+                          <div>
+                            <h4 className="font-bold text-sm text-[#0B1F33] truncate max-w-[130px]">{prov.name}</h4>
+                            <span className="text-[9px] uppercase font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded block w-max mt-0.5">
+                              {prov.category}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1 ${prov.status === 'Disponível' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-100 text-gray-500'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${prov.status === 'Disponível' ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                            {prov.status || 'Disponível'}
+                          </span>
+                          
+                          <div className="flex items-center gap-1 font-bold text-[10px] text-amber-500 bg-amber-50 px-1 py-0.5 rounded w-max">
+                            <span>★</span>
+                            <span>{prov.rating}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Info lines */}
+                      <div className="space-y-1.5 text-xs text-slate-500 pt-1">
+                        <p className="flex items-center gap-1.5 text-gray-700 font-medium font-sans">
+                          <MapPin className="w-3.5 h-3.5 text-[#0A66FF] shrink-0" />
+                          <span>{prov.region}</span>
+                        </p>
+                        <p className="flex items-center gap-1.5 font-sans leading-relaxed text-[11px]">
+                          <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>{prov.availability}</span>
+                        </p>
+                        <p className="flex items-center gap-1.5 text-slate-700 font-mono text-[11px] font-bold">
+                          <span>💰</span> Estimado: {prov.estimatedPriceRange || 'Sob cotação'}
+                        </p>
+                        <p className="text-[10px] text-gray-400 font-sans italic mt-1 bg-slate-50 p-1.5 rounded">
+                          Tempo na plataforma: {prov.joinedDate || 'Recém-chegado'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Footer buttons row */}
+                    <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between gap-2.5">
+                      <span className="text-[10px] text-gray-400 font-mono italic shrink-0">
+                        {prov.completedJobs || 0} reparos concluídos
+                      </span>
+
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => setSelectedSupportProfForView(prov)}
+                          className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-[#0B1F33] text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all"
+                        >
+                          Ver Perfil
+                        </button>
+                        <button
+                          onClick={() => {
+                            setHiringProf(prov);
+                            setWizSupportPropertyId(properties[0]?.id || '');
+                            setWizSupportDescription('');
+                            setWizSupportDate('');
+                            setWizSupportTime('09:00');
+                            setWizSupportNotes('');
+                          }}
+                          className={`cursor-pointer text-white text-[10px] font-extrabold px-3 py-1.5 rounded-xl transition-all shadow-3xs ${prov.status === 'Disponível' ? 'bg-[#0A66FF] hover:bg-blue-600' : 'bg-gray-400 cursor-not-allowed opacity-80'}`}
+                        >
+                          Contratar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* User's Support Request List section */}
+          <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+            <h4 className="font-bold text-base text-[#0B1F33] uppercase tracking-wider flex items-center gap-1.5 border-b pb-3 border-gray-100">
+              📋 Seus Chamados de Assistência Técnica
+            </h4>
+
+            {supportJobs.length === 0 ? (
+              <p className="text-xs text-gray-400 italic text-center py-6">
+                Você ainda não disparou nenhuma solicitação de emergência técnica. Quando precisar de reparos, use os botões "Contratar" acima!
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {supportJobs.map(job => {
+                  const prov = supportProfessionals.find(p => p.id === job.professionalId);
+                  return (
+                    <div key={job.id} className="border border-slate-150 rounded-2xl p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase font-black px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded">
+                              {job.category}
+                            </span>
+                            <span className="text-xs text-gray-400 font-bold font-mono">Chamado #{job.id}</span>
+                          </div>
+                          <h5 className="font-bold text-sm text-[#0B1F33] mt-1.5">
+                            Profissional técnico: <span className="text-[#0A66FF]">{prov ? prov.name : 'Técnico'}</span>
+                          </h5>
+                          <p className="text-xs text-gray-500 mt-1 flex flex-wrap items-center gap-2">
+                            <span>📅 Data desejada: <strong>{job.date}</strong> às <strong>{job.time || '09:00'}</strong> • Imóvel: <strong>{properties.find(p => p.id === job.propertyId)?.name || 'Airbnb'}</strong></span>
+                            {job.quotedValue > 0 && (
+                              <span className="bg-emerald-50 text-emerald-705 border border-emerald-100 px-2 py-0.5 rounded text-[10px] font-bold inline-flex items-center gap-1">
+                                💰 Valor: R$ {job.quotedValue.toFixed(2)}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          <span className={`text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded-lg ${
+                            job.status === 'Pendente' || job.status === 'Solicitado' ? 'bg-amber-100 text-amber-850' :
+                            job.status === 'Aceito' ? 'bg-emerald-100 text-emerald-850' :
+                            job.status === 'Concluído' ? 'bg-blue-100 text-[#0A66FF]' :
+                            job.status === 'Cancelado' ? 'bg-red-100 text-red-850' :
+                            'bg-indigo-100 text-indigo-850'
+                          }`}>
+                            ⚡ Status: {job.status}
+                          </span>
+
+                          <div className="flex gap-1.5">
+                            {/* Cancellation for pending */}
+                            {(job.status === 'Pendente' || job.status === 'Solicitado') && (
+                              <button
+                                onClick={() => {
+                                  if (window.confirm('Tem certeza de que deseja cancelar esta chamada de serviço?')) {
+                                    onUpdateSupportJob?.(job.id, { status: 'Cancelado' });
+                                    alert('Chamado cancelado com sucesso!');
+                                  }
+                                }}
+                                className="px-2.5 py-1 text-[10px] font-bold text-red-650 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                            )}
+
+                            {/* View detailed quotation and APPROVE / RECUSAR */}
+                            {job.status === 'Orçado' && job.quotedValue > 0 && (
+                              <div className="flex flex-col sm:flex-row items-center gap-2 bg-white px-2 py-1.5 rounded-xl border border-slate-200 shadow-3xs">
+                                <span className="font-mono text-xs font-black text-slate-800">R$ {job.quotedValue.toFixed(2)}</span>
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => {
+                                      onUpdateSupportJob?.(job.id, { status: 'Aceito' });
+                                      alert('Orçamento aprovado com sucesso! O prestador foi notificado e iniciará o chamado.');
+                                    }}
+                                    className="px-2.5 py-1 text-[10px] font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-all cursor-pointer inline-flex items-center gap-1"
+                                  >
+                                    <span>✔️</span> Aprovar
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (window.confirm('Tem certeza de que deseja recusar este orçamento? O status retornará para Solicitado para nova cotação.')) {
+                                        onUpdateSupportJob?.(job.id, { status: 'Solicitado', quotedValue: 0 });
+                                        alert('Orçamento recusado. O profissional foi sinalizado para rever a proposta.');
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 text-[10px] font-extrabold text-white bg-rose-500 hover:bg-rose-600 rounded-lg transition-all cursor-pointer inline-flex items-center gap-1"
+                                  >
+                                    <span>✖️</span> Recusar
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Complete job if Accepted */}
+                            {job.status === 'Aceito' && (
+                              <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-100 font-bold px-2.5 py-1 rounded-lg animate-pulse inline-flex items-center gap-1">
+                                ⏳ Aguardando Pagamento Pix
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Job Description card inner */}
+                      <p className="text-xs text-gray-700 bg-white p-2.5 rounded-xl border border-slate-105 mt-2.5 font-sans leading-relaxed">
+                        🚧 <strong>Problema relatado:</strong> "{job.description}"
+                        {job.notes && <span className="block text-gray-400 mt-1 font-mono text-[10px]">Observações extras: {job.notes}</span>}
+                      </p>
+
+                      {/* Pix Payment Drawer */}
+                      {job.status === 'Aceito' && (
+                        <div className="mt-3 bg-emerald-50/50 border border-emerald-100 rounded-xl p-4 space-y-3 font-sans">
+                          <div className="flex items-center gap-2 border-b border-emerald-100/50 pb-2">
+                            <span className="text-xs">💰</span>
+                            <h6 className="font-extrabold text-xs text-[#0B1F33]">PAGAMENTO PIX DO PROFISSIONAL PENDENTE</h6>
+                          </div>
+                          
+                          <p className="text-xs text-slate-600 leading-relaxed">
+                            Efetue o pagamento de <strong>R$ {job.quotedValue.toFixed(2)}</strong> diretamente ao profissional técnico para liberar a conclusão do chamado.
+                          </p>
+
+                          <div className="grid sm:grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-emerald-100/30">
+                            <div className="space-y-1 text-xs">
+                              <p className="text-gray-400 text-[10px] uppercase font-bold">Chave Pix</p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-semibold text-slate-800 break-all select-all font-mono text-[11px] bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                                  {prov?.pixKey || 'Chave não cadastrada'}
+                                </span>
+                                {prov?.pixKey && (
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(prov.pixKey);
+                                      alert('Chave Pix copiada com sucesso!');
+                                    }}
+                                    className="p-1 text-[#0A66FF] hover:bg-blue-50 rounded transition-colors text-[10px] font-bold cursor-pointer inline-flex items-center gap-0.5"
+                                    title="Copiar Chave Pix"
+                                  >
+                                    📋 Copiar
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-1 text-xs">
+                              <p className="text-gray-400 text-[10px] uppercase font-bold">Beneficiário / Favorecido</p>
+                              <p className="font-semibold text-slate-800">{prov?.pixHolderName || prov?.name || 'Técnico'}</p>
+                            </div>
+
+                            <div className="space-y-1 text-xs sm:col-span-2 border-t pt-2 border-slate-100 flex flex-col sm:flex-row justify-between gap-2">
+                              <div>
+                                <p className="text-gray-400 text-[10px] uppercase font-bold">Banco / Instituição</p>
+                                <p className="font-semibold text-slate-800">{prov?.bank || 'Não informado'}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400 text-[10px] uppercase font-bold">Valor do Serviço</p>
+                                <p className="font-bold text-slate-900">R$ {job.quotedValue.toFixed(2)}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Interactive QR Code scan effect simulation */}
+                          <div className="flex flex-col sm:flex-row items-center gap-3 bg-white p-3 rounded-xl border border-emerald-100/30">
+                            {/* QR Code Graphic container */}
+                            <div className="relative w-20 h-20 bg-slate-50 border rounded-lg flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                              <div className="absolute inset-x-2 h-[1px] bg-emerald-500 animate-[bounce_2s_infinite]"></div>
+                              {/* Simple grid lines simulating a QR code pattern */}
+                              <div className="grid grid-cols-4 gap-1 w-full h-full opacity-60">
+                                <div className="bg-slate-800 rounded-sm"></div>
+                                <div className="bg-slate-300 rounded-sm"></div>
+                                <div className="bg-slate-800 rounded-sm"></div>
+                                <div className="bg-slate-800 rounded-sm"></div>
+                                <div className="bg-slate-800 rounded-sm"></div>
+                                <div className="bg-slate-800 rounded-sm"></div>
+                                <div className="bg-slate-300 rounded-sm"></div>
+                                <div className="bg-slate-800 rounded-sm"></div>
+                                <div className="bg-slate-300 rounded-sm"></div>
+                                <div className="bg-slate-800 rounded-sm"></div>
+                                <div className="bg-slate-800 rounded-sm"></div>
+                                <div className="bg-slate-300 rounded-sm"></div>
+                                <div className="bg-slate-800 rounded-sm"></div>
+                                <div className="bg-slate-300 rounded-sm"></div>
+                                <div className="bg-slate-800 rounded-sm"></div>
+                                <div className="bg-slate-800 rounded-sm"></div>
+                              </div>
+                              <span className="absolute text-[8px] bg-white text-[#0B1F33] font-black uppercase px-1 rounded border shadow-3xs">PIX</span>
+                            </div>
+
+                            <div className="flex-1 font-sans space-y-1.5 text-center sm:text-left">
+                              <p className="text-xs font-bold text-slate-800">Copia e Cola Pix Automático</p>
+                              <p className="text-[10px] text-gray-400">Use no seu aplicativo bancário na opção Pix Copia e Cola.</p>
+                              <button
+                                onClick={() => {
+                                  const mockPixCode = `00020101021126360014br.gov.bcb.pix0114${prov?.pixKey || 'cleanhost'}5204000053039865405${job.quotedValue.toFixed(2)}5802BR5915CleanHostPay6009SAO%20PAULO62070503***6304`;
+                                  navigator.clipboard.writeText(mockPixCode);
+                                  alert('Código Copia e Cola Pix copiado com sucesso! Agora abra o app de seu banco e pague.');
+                                }}
+                                className="bg-[#0A66FF] hover:bg-blue-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-colors inline-flex items-center gap-1 shadow-3xs"
+                              >
+                                📋 Copiar Código Copia e Cola Pix
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end pt-1">
+                            <button
+                              onClick={() => {
+                                onUpdateSupportJob?.(job.id, { status: 'Concluído' });
+                                alert('Pagamento Pix confirmado! Status do sinistro atualizado para CONCLUÍDO.');
+                              }}
+                              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-md"
+                            >
+                              <span>✔️</span> Confirmar Pagamento Realizado (Pix Pago)
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Evaluation/Rating block once Concluído */}
+                      {job.status === 'Concluído' && (
+                        !job.review ? (
+                          <div className="mt-3 bg-amber-50/40 border border-amber-100 rounded-2xl p-4 space-y-3 font-sans">
+                            <div className="flex items-center gap-2 border-b border-amber-150 pb-2">
+                              <span className="text-sm">⭐</span>
+                              <h6 className="font-extrabold text-xs text-[#0B1F33]">AVALIE O TRABALHO DO PROFISSIONAL</h6>
+                            </div>
+                            <p className="text-xs text-slate-600 leading-relaxed">
+                              O reparo foi finalizado! Avalie o serviço do prestador técnico <strong>{prov?.name || 'Técnico'}</strong> para ajudá-lo a melhorar sua reputação e pontuação na plataforma CleanHost.
+                            </p>
+
+                            <div className="space-y-3.5 bg-white p-4 rounded-xl border border-slate-100 shadow-3xs">
+                              {/* Rating Stars Selector */}
+                              <div className="space-y-1">
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Sua Nota de Avaliação</p>
+                                <div className="flex items-center gap-1.5">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                      key={star}
+                                      type="button"
+                                      onClick={() => setSupportRatings(prev => ({ ...prev, [job.id]: star }))}
+                                      className="cursor-pointer focus:outline-hidden transition-transform hover:scale-125"
+                                      title={`${star} Estrelas`}
+                                    >
+                                      <Star 
+                                        className={`w-6 h-6 ${
+                                          star <= (supportRatings[job.id] ?? 5) 
+                                            ? 'fill-amber-400 text-amber-400' 
+                                            : 'text-slate-200'
+                                        }`} 
+                                      />
+                                    </button>
+                                  ))}
+                                  <span className="text-xs font-black text-slate-500 ml-1.5 font-mono">
+                                    {(supportRatings[job.id] ?? 5)} / 5
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Comment Field */}
+                              <div className="space-y-1">
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Mensagem / Depoimento Técnico</p>
+                                <textarea
+                                  value={supportComments[job.id] || ''}
+                                  onChange={(e) => setSupportComments(prev => ({ ...prev, [job.id]: e.target.value }))}
+                                  placeholder="Descreva brevemente como foi o atendimento do profissional, agilidade, pontualidade..."
+                                  className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0A66FF]/20 focus:border-[#0A66FF] focus:outline-hidden min-h-[60px]"
+                                />
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex justify-end pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRateSupportProfessional(job.id, job.professionalId)}
+                                  className="w-full sm:w-auto bg-[#0A66FF] hover:bg-blue-600 text-white font-extrabold text-[11px] px-5 py-2.5 rounded-xl transition-all shadow-md active:scale-95 inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                                >
+                                  ⭐ Enviar Avaliação do Técnico
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-3 bg-blue-50/25 border border-blue-100/50 rounded-2xl p-4 space-y-2.5 font-sans">
+                            <div className="flex items-center justify-between border-b border-blue-100/20 pb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs">⭐</span>
+                                <h6 className="font-extrabold text-xs text-blue-950 uppercase">SUA AVALIAÇÃO DO PRESTADOR</h6>
+                              </div>
+                              <span className="text-[10px] text-gray-400 font-semibold font-mono">{job.review.date}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star 
+                                  key={star}
+                                  className={`w-4 h-4 ${
+                                    star <= job.review.rating 
+                                      ? 'fill-amber-400 text-amber-400' 
+                                      : 'text-slate-200'
+                                  }`} 
+                                />
+                              ))}
+                              <span className="text-xs font-black text-slate-700 ml-1.5">{job.review.rating}/5 Estrelas</span>
+                            </div>
+                            <p className="text-xs text-slate-650 italic bg-white p-3 rounded-xl border border-slate-100 leading-relaxed font-sans">
+                              "{job.review.comment}"
+                            </p>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* RENDER VIEW: TRACKER / REAL TIME TRACKING IN AIRBNB STYLE */}
       {activeTab === 'tracker' && activeRequest && (
         <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
@@ -1704,6 +2337,249 @@ export default function HostSection({
           </div>
         );
       })()}
+
+      {/* VER PERFIL MODAL DE REDE DE APOIO */}
+      {selectedSupportProfForView && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in text-slate-800">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto space-y-5 text-left">
+            <button
+              onClick={() => setSelectedSupportProfForView(null)}
+              className="absolute right-4 top-4 text-gray-405 hover:text-gray-600 p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full cursor-pointer transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Profile Header */}
+            <div className="flex items-center gap-4 pb-4 border-b border-gray-150">
+              {selectedSupportProfForView.photoUrl ? (
+                <img 
+                  src={selectedSupportProfForView.photoUrl} 
+                  alt={selectedSupportProfForView.name} 
+                  className="w-16 h-16 rounded-2xl object-cover border-2 border-[#0A66FF]/20"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black text-xl uppercase ${selectedSupportProfForView.logoColor || 'bg-blue-50 text-blue-600'}`}>
+                  {selectedSupportProfForView.name.substring(0, 2)}
+                </div>
+              )}
+              <div>
+                <span className="text-[10px] font-bold text-[#12D6C5] bg-[#0B1F33] px-2.5 py-0.5 rounded uppercase font-mono">
+                  {selectedSupportProfForView.category} Homologado
+                </span>
+                <h3 className="font-bold text-lg text-[#0B1F33] mt-1">{selectedSupportProfForView.name}</h3>
+                <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                  <MapPin className="w-3 h-3 text-slate-400" />
+                  Região de Atendimento: {selectedSupportProfForView.region}
+                </p>
+              </div>
+            </div>
+
+            {/* Biography */}
+            <div className="space-y-1.5 bg-slate-55 bg-slate-50 p-4 rounded-2xl">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block font-sans">Sobre o Profissional / Biografia</span>
+              <p className="text-xs text-slate-705 leading-relaxed font-sans font-medium">
+                {selectedSupportProfForView.biography || 'Profissional técnico experiente homologado para atuar na plataforma da CleanHost garantindo rapidez e qualidade de manutenção.'}
+              </p>
+            </div>
+
+            {/* Platform Stats info */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-emerald-50/50 p-3.5 rounded-2xl border border-emerald-100 text-center">
+                <span className="text-gray-400 text-[9px] block font-bold uppercase tracking-wider">Histórico de Reparos</span>
+                <span className="text-emerald-700 text-base font-mono font-black mt-1 block">
+                  {selectedSupportProfForView.completedJobs || 0} concluídos
+                </span>
+              </div>
+              <div className="bg-amber-50/50 p-3.5 rounded-2xl border border-amber-100 text-center">
+                <span className="text-gray-400 text-[9px] block font-bold uppercase tracking-wider">Avaliação Média</span>
+                <span className="text-amber-800 text-base font-mono font-black mt-1 block flex items-center justify-center gap-1">
+                  ★ {selectedSupportProfForView.rating || '4.8'}
+                </span>
+              </div>
+            </div>
+
+            {/* Dynamic review ratings list */}
+            <div className="space-y-2.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block font-sans">Depoimentos e Avaliações de Anfitriões</span>
+              {selectedSupportProfForView.reviews && selectedSupportProfForView.reviews.length > 0 ? (
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {selectedSupportProfForView.reviews.map((rev) => (
+                    <div key={rev.id} className="bg-slate-50 border border-gray-100 p-2.5 rounded-xl space-y-1 text-left">
+                      <div className="flex justify-between items-center text-[10px] font-bold">
+                        <span className="text-[#0B1F33]">{rev.raterName}</span>
+                        <span className="text-amber-500 font-mono text-[9px]">★ {rev.rating}/5</span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 italic">"{rev.comment}"</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-gray-400 italic">Nenhum depoimento detalhado indexado no momento.</p>
+              )}
+            </div>
+
+            {/* Joined time info */}
+            <p className="text-[10px] text-gray-400 font-sans italic text-center mt-2">
+              Ingressou na CleanHost em: {selectedSupportProfForView.joinedDate || 'Fevereiro de 2024'}
+            </p>
+
+            {/* Quick hire action from profile */}
+            <button
+              onClick={() => {
+                const tempProf = selectedSupportProfForView;
+                setSelectedSupportProfForView(null);
+                setHiringProf(tempProf);
+                setWizSupportPropertyId(properties[0]?.id || '');
+                setWizSupportDescription('');
+                setWizSupportDate('');
+                setWizSupportTime('09:00');
+                setWizSupportNotes('');
+              }}
+              className="w-full py-3 bg-[#0A66FF] hover:bg-blue-600 text-white text-xs font-black rounded-xl cursor-pointer uppercase transition-all shadow-md mt-2"
+            >
+              Solicitar Contratação Imediata
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* CONTRATAR MODAL DE REDE DE APOIO */}
+      {hiringProf && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in text-slate-800">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto space-y-4 text-left">
+            <button
+              onClick={() => setHiringProf(null)}
+              className="absolute right-4 top-4 text-gray-405 hover:text-gray-600 p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full cursor-pointer transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div>
+              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 bg-blue-50 text-[#0A66FF] rounded">
+                Formulário de Contratação Direta
+              </span>
+              <h3 className="font-bold text-lg text-[#0B1F33] mt-2">🔨 Contratar {hiringProf.name}</h3>
+              <p className="text-xs text-gray-500">
+                Especialista indicado: <strong>{hiringProf.category}</strong> • Cidade: <strong>{hiringProf.region}</strong>
+              </p>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!wizSupportPropertyId || !wizSupportDescription || !wizSupportDate) {
+                  alert('Por favor, preencha todos os campos obrigatórios.');
+                  return;
+                }
+
+                const newJob: SupportJob = {
+                  id: `job-${Date.now()}`,
+                  professionalId: hiringProf.id,
+                  hostId: loggedInUser?.id || 'host-current',
+                  category: hiringProf.category,
+                  propertyId: wizSupportPropertyId,
+                  description: wizSupportDescription,
+                  quotedValue: 0, // Pending commercial quote
+                  status: 'Solicitado', // To trigger bid flow inside platform
+                  date: wizSupportDate,
+                  time: wizSupportTime,
+                  notes: wizSupportNotes
+                };
+
+                onAddSupportJob?.(newJob);
+                setHiringProf(null);
+                alert(`Solicitação enviada com sucesso para ${hiringProf.name}! O técnico analisará o chamado e responderá de imediato com um orçamento de reparo.`);
+              }}
+              className="space-y-4 pt-2"
+            >
+              {/* Select Property */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-gray-650 block">Escolha seu Imóvel *</label>
+                <select
+                  value={wizSupportPropertyId}
+                  onChange={(e) => setWizSupportPropertyId(e.target.value)}
+                  className="w-full bg-slate-50 border border-gray-150 p-2.5 rounded-xl text-xs text-[#0B1F33] font-bold outline-hidden"
+                  required
+                >
+                  <option value="">Selecione um imóvel...</option>
+                  {properties.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.city})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Service Desired / Problem Description */}
+              <div className="space-y-1 font-sans">
+                <label className="text-[11px] font-bold text-gray-650 block">Descrição detalhada do problema técnico *</label>
+                <textarea
+                  placeholder="Ex: Disjuntores desarmam sempre que liga o ar-condicionado da suíte master. Ou: pia de cozinha entupida vazando no armário inferior."
+                  value={wizSupportDescription}
+                  onChange={(e) => setWizSupportDescription(e.target.value)}
+                  className="w-full text-xs p-2.5 border rounded-xl outline-hidden h-24 resize-none font-sans"
+                  required
+                />
+              </div>
+
+              {/* Date & Time picking row */}
+              <div className="grid grid-cols-2 gap-3 animate-fade-in">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-gray-650 block font-sans">Data desejada *</label>
+                  <input
+                    type="date"
+                    value={wizSupportDate}
+                    onChange={(e) => setWizSupportDate(e.target.value)}
+                    className="w-full bg-slate-50 border p-2 text-xs text-[#0B1F33] font-bold rounded-xl"
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-gray-650 block font-sans">Horário desejado</label>
+                  <input
+                    type="time"
+                    value={wizSupportTime}
+                    onChange={(e) => setWizSupportTime(e.target.value)}
+                    className="w-full bg-slate-50 border p-2 text-xs text-[#0B1F33] font-bold rounded-xl"
+                  />
+                </div>
+              </div>
+
+              {/* Extras Observations */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-gray-650 block font-sans">Observações adicionais e recomendações de acesso</label>
+                <textarea
+                  placeholder="Ex: Deixarei a chave no cofre numérico na porta da frente. O código de acesso é 4920."
+                  value={wizSupportNotes}
+                  onChange={(e) => setWizSupportNotes(e.target.value)}
+                  className="w-full text-xs p-2.5 border rounded-xl outline-hidden h-16 resize-none font-sans"
+                />
+              </div>
+
+              {/* Extra warnings info */}
+              <p className="text-[9px] text-[#0fb0a3] bg-teal-50 p-2.5 rounded-lg leading-relaxed font-semibold">
+                🔒 <strong>Intermediação Garantida:</strong> A contratação pela plataforma oferece garantia total CleanHost contra avarias adicionais, suporte 24h e emissão automatizada de recibos estruturais.
+              </p>
+
+              {/* Action buttons list */}
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setHiringProf(null)}
+                  className="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer text-center"
+                >
+                  Voltar
+                </button>
+                <button
+                  type="submit"
+                  className="w-2/3 py-2.5 bg-[#0A66FF] hover:bg-blue-600 font-extrabold text-xs text-white rounded-xl transition-all shadow-3xs cursor-pointer text-center"
+                >
+                  Confirmar Solicitacão
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

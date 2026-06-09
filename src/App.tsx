@@ -9,7 +9,7 @@ import {
   HelpCircle, Star, Settings, ExternalLink, RefreshCw, LogOut, CheckSquare
 } from 'lucide-react';
 
-import { Property, Professional, SupportProfessional, CleaningRequest, SupportJob, UserRole, RequestStatus } from './types';
+import { Property, Professional, SupportProfessional, CleaningRequest, SupportJob, UserRole, RequestStatus, SupportNotification } from './types';
 import { mockProperties, mockProfessionals, mockSupportProfessionals, mockRequests } from './data/mockData';
 
 // Firestore Integration APIs
@@ -63,6 +63,11 @@ export default function App() {
 
   const [supportJobs, setSupportJobs] = useState<SupportJob[]>(() => {
     const local = localStorage.getItem('cleanhost_support_jobs');
+    return local ? JSON.parse(local) : [];
+  });
+
+  const [supportNotifications, setSupportNotifications] = useState<SupportNotification[]>(() => {
+    const local = localStorage.getItem('cleanhost_support_notifications');
     return local ? JSON.parse(local) : [];
   });
 
@@ -167,6 +172,14 @@ export default function App() {
 
   useEffect(() => {
     try {
+      localStorage.setItem('cleanhost_support_notifications', JSON.stringify(supportNotifications));
+    } catch (err) {
+      console.warn('Falha ao escrever notificações de apoio no localStorage:', err);
+    }
+  }, [supportNotifications]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem('cleanhost_registered_users', JSON.stringify(registeredUsers));
     } catch (err) {
       console.warn('Falha ao escrever usuários registrados no localStorage:', err);
@@ -191,6 +204,7 @@ export default function App() {
 
   // Firebase sync Refs and states
   const [isInitialLoadCompleted, setIsInitialLoadCompleted] = useState(false);
+  const deduplicatedRef = React.useRef(false);
   const lastSyncedUsersRef = React.useRef<any[]>([]);
   const lastSyncedPropertiesRef = React.useRef<Property[]>([]);
   const lastSyncedProfessionalsRef = React.useRef<Professional[]>([]);
@@ -471,6 +485,96 @@ export default function App() {
     };
   }, []);
 
+  // Automatic Deduplication of Properties to keep exactly 4 unique properties
+  useEffect(() => {
+    if (!isInitialLoadCompleted || deduplicatedRef.current) return;
+    if (properties.length === 0) return;
+
+    deduplicatedRef.current = true;
+
+    // Helper functions for normalization
+    const getAddressNumber = (addr: string) => {
+      const match = addr.match(/\d+/);
+      return match ? match[0] : '';
+    };
+
+    const getStreetBase = (addr: string) => {
+      return addr.toLowerCase()
+        .replace(/^(rua|avenida|av|alameda|travessa|rodovia|bairro|estrada|r|av\.)\.?\s+/i, '')
+        .replace(/[\s,.\-ºª]/g, '');
+    };
+
+    const uniqueProps: Property[] = [];
+    const deletedIdMap = new Map<string, string>();
+    const deletedPropList: Property[] = [];
+
+    for (const p of properties) {
+      const pNum = getAddressNumber(p.address);
+      const pStreet = getStreetBase(p.address);
+      const pNameNorm = p.name.toLowerCase().trim().replace(/[\s,.\-e]/g, '');
+
+      const existingDup = uniqueProps.find(u => {
+        const uNum = getAddressNumber(u.address);
+        const uStreet = getStreetBase(u.address);
+        const uNameNorm = u.name.toLowerCase().trim().replace(/[\s,.\-e]/g, '');
+
+        if (p.id === u.id) return true;
+
+        const isSameAddressExact = p.address.toLowerCase().replace(/[\s,.\-]/g, '') === u.address.toLowerCase().replace(/[\s,.\-]/g, '');
+        if (isSameAddressExact) return true;
+
+        if (pStreet && uStreet && pStreet === uStreet && pNum === uNum && pNum !== '') return true;
+
+        const namesAreSimilar = pNameNorm.includes(uNameNorm) || uNameNorm.includes(pNameNorm);
+        const isSameCity = p.city?.toLowerCase().trim() === u.city?.toLowerCase().trim();
+        if (namesAreSimilar && isSameCity && pNum === uNum && pNum !== '') return true;
+
+        return false;
+      });
+
+      if (existingDup) {
+        deletedIdMap.set(p.id, existingDup.id);
+        deletedPropList.push(p);
+      } else {
+        uniqueProps.push(p);
+      }
+    }
+
+    if (deletedPropList.length > 0) {
+      console.log('[CleanHost] Deduplication found duplicates! Removing:', deletedPropList.map(p => p.name));
+      setProperties(uniqueProps);
+
+      // Dynamic update for requests pointing to the deleted properties
+      setRequests(prev => prev.map(req => {
+        if (deletedIdMap.has(req.propertyId)) {
+          const keptId = deletedIdMap.get(req.propertyId)!;
+          const keptProp = uniqueProps.find(u => u.id === keptId);
+          return {
+            ...req,
+            propertyId: keptId,
+            propertyName: keptProp ? keptProp.name : req.propertyName,
+            propertyAddress: keptProp ? keptProp.address : req.propertyAddress
+          };
+        }
+        return req;
+      }));
+
+      // Dynamic update for support jobs pointing to the deleted properties
+      setSupportJobs(prev => prev.map(job => {
+        if (deletedIdMap.has(job.propertyId)) {
+          const keptId = deletedIdMap.get(job.propertyId)!;
+          const keptProp = uniqueProps.find(u => u.id === keptId);
+          return {
+            ...job,
+            propertyId: keptId,
+            propertyName: keptProp ? keptProp.name : (job.propertyName || '')
+          };
+        }
+        return job;
+      }));
+    }
+  }, [isInitialLoadCompleted, properties]);
+
   // 2. Incremental Sync back to Firestore on any state edits made within this instance!
   useEffect(() => {
     if (!isInitialLoadCompleted) return;
@@ -598,6 +702,20 @@ export default function App() {
   };
 
   const handleUpdateRequest = (reqId: string, updates: Partial<CleaningRequest>) => {
+    // Security and privacy check
+    if (loggedInUser && loggedInUser.role !== 'ADMIN') {
+      const targetReq = requests.find(r => r.id === reqId);
+      if (targetReq) {
+        const isAssignedCleaner = targetReq.professionalId === loggedInUser.id;
+        const ownedProperties = properties.filter(p => p.ownerId === loggedInUser.id || p.ownerEmail === loggedInUser.email);
+        const isPropertyOwner = ownedProperties.some(p => p.id === targetReq.propertyId);
+        
+        if (!isAssignedCleaner && !isPropertyOwner) {
+          console.warn('Security Block: Unauthorized update request to request id', reqId);
+          return;
+        }
+      }
+    }
     setRequests(prev => prev.map(r => r.id === reqId ? { ...r, ...updates } : r));
   };
 
@@ -624,6 +742,15 @@ export default function App() {
   };
 
   const handleUpdateProperty = async (updatedProp: Property) => {
+    // Security and privacy check
+    if (loggedInUser && loggedInUser.role !== 'ADMIN') {
+      const original = properties.find(p => p.id === updatedProp.id);
+      if (original && original.ownerId !== loggedInUser.id && original.ownerEmail !== loggedInUser.email) {
+        console.warn('Security Block: Unauthorized property update');
+        return;
+      }
+    }
+
     // 1. Update local state immediately
     setProperties(prev => prev.map(p => p.id === updatedProp.id ? updatedProp : p));
 
@@ -649,11 +776,51 @@ export default function App() {
   };
 
   const handleUpdateCleanerInfo = (cleanerId: string, updates: Partial<Professional>) => {
+    // Security and privacy check
+    if (loggedInUser && loggedInUser.role !== 'ADMIN' && cleanerId !== loggedInUser.id) {
+      console.warn('Security Block: Unauthorized cleaner info update');
+      return;
+    }
     setProfessionals(prev => prev.map(p => p.id === cleanerId ? { ...p, ...updates } : p));
   };
 
   const handleUpdateSupportProfessionalInfo = (profId: string, updates: Partial<SupportProfessional>) => {
+    // Security and privacy check
+    const isPublicMetricUpdate = updates.rating !== undefined || updates.reviews !== undefined || updates.completedJobs !== undefined;
+    if (loggedInUser && loggedInUser.role !== 'ADMIN' && profId !== loggedInUser.id && !isPublicMetricUpdate) {
+      console.warn('Security Block: Unauthorized support professional info update');
+      return;
+    }
     setSupportProfessionals(prev => prev.map(p => p.id === profId ? { ...p, ...updates } : p));
+
+    // Update registered user info to stay completely in sync
+    setRegisteredUsers(prev => prev.map(u => {
+      if (u.id === profId) {
+        return {
+          ...u,
+          name: updates.name ?? u.name,
+          email: updates.email ?? u.email,
+          phone: updates.phone ?? u.phone,
+          photoUrl: updates.photoUrl ?? u.photoUrl,
+          city: updates.city ?? u.city,
+          state: updates.state ?? u.state
+        };
+      }
+      return u;
+    }));
+
+    // Update active logged in user state immediately to reflect name/photo changes on the header instantly
+    if (loggedInUser && loggedInUser.id === profId) {
+      setLoggedInUser(prev => prev ? {
+        ...prev,
+        name: updates.name ?? prev.name,
+        email: updates.email ?? prev.email,
+        extra: {
+          ...prev.extra,
+          photoUrl: updates.photoUrl ?? prev.extra?.photoUrl
+        }
+      } : null);
+    }
   };
 
   const handleAddProfessional = (newClean: Professional) => {
@@ -662,9 +829,47 @@ export default function App() {
 
   const handleAddSupportJob = (newJob: SupportJob) => {
     setSupportJobs(prev => [newJob, ...prev]);
+
+    // Create a notification for the professional
+    const prof = supportProfessionals.find(p => p.id === newJob.professionalId);
+    const prefs = prof?.notificationPrefs || { platform: true, whatsapp: true, email: true, sms: false };
+    
+    const notificationMessage = `Você recebeu uma nova solicitação de serviço na CleanHost. Acesse sua conta para visualizar os detalhes e responder ao cliente.`;
+    
+    const newNotification: SupportNotification = {
+      id: `SUP-NOT-${Math.floor(1001 + Math.random() * 8999)}`,
+      jobId: newJob.id,
+      professionalId: newJob.professionalId,
+      title: '🚨 Nova Solicitação de Serviço',
+      message: notificationMessage,
+      sentChannels: {
+        platform: prefs.platform !== false,
+        whatsapp: prefs.whatsapp !== false,
+        email: prefs.email !== false,
+        sms: prefs.sms === true
+      },
+      status: 'sent',
+      createdAt: new Date().toISOString(),
+      read: false
+    };
+
+    setSupportNotifications(prev => [newNotification, ...prev]);
   };
 
   const handleUpdateSupportJob = (jobId: string, updates: Partial<SupportJob>) => {
+    // Security and privacy check
+    if (loggedInUser && loggedInUser.role !== 'ADMIN') {
+      const targetJob = supportJobs.find(j => j.id === jobId);
+      if (targetJob) {
+        const isAssignedTech = targetJob.professionalId === loggedInUser.id;
+        const isRequesterHost = targetJob.hostId === loggedInUser.id;
+        
+        if (!isAssignedTech && !isRequesterHost) {
+          console.warn('Security Block: Unauthorized update request to support job', jobId);
+          return;
+        }
+      }
+    }
     setSupportJobs(prev => prev.map(j => j.id === jobId ? { ...j, ...updates } : j));
   };
 
@@ -1034,66 +1239,117 @@ export default function App() {
               </div>
             )}
 
-            {/* Swappable Views */}
-            {(loggedInUser.role === 'ADMIN' ? (adminViewMode === 'host' || adminViewMode === 'cliente') : (userRole === 'HOST' || userRole === 'CLIENTE')) && (
-              <HostSection 
-                properties={properties}
-                professionals={professionals.filter(p => p.isApproved)}
-                requests={requests}
-                onAddRequest={handleAddRequest}
-                onUpdateRequest={handleUpdateRequest}
-                onAddProperty={handleAddProperty}
-                onUpdateProperty={handleUpdateProperty}
-                onOpenReceipt={(req) => setSelectedReceiptRequest(req)}
-                financeSettings={financeSettings}
-                onRecordFinanceLog={(log: any) => setFinanceLogs(prev => [log, ...prev])}
-                userName={loggedInUser?.role === 'ADMIN' && (adminViewMode === 'host' || adminViewMode === 'cliente') ? 'Anfitrião / Cliente Simulado' : (loggedInUser?.name || 'Anfitrião / Cliente')}
-                loggedInUser={loggedInUser}
-              />
-            )}
+            {/* Swappable Views (Filtered for Privacy & Security) */}
+            {(() => {
+              const isAdmin = loggedInUser?.role === 'ADMIN' || loggedInUser?.email?.toLowerCase() === 'cleanhost.oficial@gmail.com';
+              
+              // 1. Host Section Filters
+              const hostProperties = isAdmin 
+                ? properties 
+                : properties.filter(p => p.ownerId === loggedInUser?.id || p.ownerEmail === loggedInUser?.email);
+              
+              const hostRequests = isAdmin 
+                ? requests 
+                : requests.filter(r => hostProperties.some(p => p.id === r.propertyId));
+              
+              const hostSupportJobs = isAdmin 
+                ? supportJobs 
+                : supportJobs.filter(j => j.hostId === loggedInUser?.id || hostProperties.some(p => p.id === j.propertyId));
 
-            {(loggedInUser.role === 'ADMIN' ? adminViewMode === 'cleaner' : userRole === 'CLEANER') && (
-              <CleanerSection 
-                professionals={professionals}
-                activeCleanerId={activeCleanerId || (professionals[0]?.id || '')}
-                requests={requests}
-                onUpdateRequest={handleUpdateRequest}
-                onUpdateCleanerInfo={handleUpdateCleanerInfo}
-                financeSettings={financeSettings}
-              />
-            )}
+              // 2. Cleaner Section Filters
+              const cleanerProfessionals = isAdmin
+                ? professionals
+                : professionals.filter(p => p.id === loggedInUser?.id);
+              
+              const cleanerRequests = isAdmin
+                ? requests
+                : requests.filter(r => r.professionalId === loggedInUser?.id);
 
-            {(loggedInUser.role === 'ADMIN' ? adminViewMode === 'support' : userRole === 'SUPPORT') && (
-              <SupportSection 
-                properties={properties}
-                supportProfessionals={supportProfessionals}
-                supportJobs={supportJobs}
-                onAddSupportJob={handleAddSupportJob}
-                onUpdateSupportJob={handleUpdateSupportJob}
-                onAddSupportProfessional={handleAddSupportProfessional}
-                onUpdateSupportProfessionalInfo={handleUpdateSupportProfessionalInfo}
-                financeSettings={financeSettings}
-                activeRole={loggedInUser.role === 'ADMIN' ? 'SUPPORT' : userRole}
-              />
-            )}
+              // 3. Support Section Filters
+              const supportSectionProfessionals = isAdmin
+                ? supportProfessionals
+                : supportProfessionals.filter(p => p.id === loggedInUser?.id);
+              
+              const supportSectionJobs = isAdmin
+                ? supportJobs
+                : supportJobs.filter(j => j.professionalId === loggedInUser?.id);
+              
+              const supportSectionProperties = isAdmin
+                ? properties
+                : properties.filter(p => supportSectionJobs.some(j => j.propertyId === p.id));
 
-            {(loggedInUser.role === 'ADMIN' ? adminViewMode === 'admin' : userRole === 'ADMIN') && (
-              <AdminSection 
-                properties={properties}
-                professionals={professionals}
-                requests={requests}
-                supportJobs={supportJobs}
-                existingSupportProfessionals={supportProfessionals}
-                onUpdateRequest={handleUpdateRequest}
-                onUpdateCleanerInfo={handleUpdateCleanerInfo}
-                onAddProfessional={handleAddProfessional}
-                registeredUsers={registeredUsers}
-                onUpdateRegisteredUserStatus={handleUpdateRegisteredUserStatus}
-                financeSettings={financeSettings}
-                onChangeFinanceSettings={setFinanceSettings}
-                financeLogs={financeLogs}
-              />
-            )}
+              return (
+                <>
+                  {(loggedInUser.role === 'ADMIN' ? (adminViewMode === 'host' || adminViewMode === 'cliente') : (userRole === 'HOST' || userRole === 'CLIENTE')) && (
+                    <HostSection 
+                      properties={hostProperties}
+                      professionals={professionals.filter(p => p.isApproved)}
+                      requests={hostRequests}
+                      onAddRequest={handleAddRequest}
+                      onUpdateRequest={handleUpdateRequest}
+                      onAddProperty={handleAddProperty}
+                      onUpdateProperty={handleUpdateProperty}
+                      onOpenReceipt={(req) => setSelectedReceiptRequest(req)}
+                      financeSettings={financeSettings}
+                      onRecordFinanceLog={(log: any) => setFinanceLogs(prev => [log, ...prev])}
+                      userName={loggedInUser?.role === 'ADMIN' && (adminViewMode === 'host' || adminViewMode === 'cliente') ? 'Anfitrião / Cliente Simulado' : (loggedInUser?.name || 'Anfitrião / Cliente')}
+                      loggedInUser={loggedInUser}
+                      supportProfessionals={supportProfessionals}
+                      supportJobs={hostSupportJobs}
+                      onAddSupportJob={handleAddSupportJob}
+                      onUpdateSupportJob={handleUpdateSupportJob}
+                      onUpdateSupportProfessionalInfo={handleUpdateSupportProfessionalInfo}
+                    />
+                  )}
+
+                  {(loggedInUser.role === 'ADMIN' ? adminViewMode === 'cleaner' : userRole === 'CLEANER') && (
+                    <CleanerSection 
+                      professionals={cleanerProfessionals}
+                      activeCleanerId={activeCleanerId || (cleanerProfessionals[0]?.id || '')}
+                      requests={cleanerRequests}
+                      onUpdateRequest={handleUpdateRequest}
+                      onUpdateCleanerInfo={handleUpdateCleanerInfo}
+                      financeSettings={financeSettings}
+                    />
+                  )}
+
+                  {(loggedInUser.role === 'ADMIN' ? adminViewMode === 'support' : userRole === 'SUPPORT') && (
+                    <SupportSection 
+                      properties={supportSectionProperties}
+                      supportProfessionals={supportSectionProfessionals}
+                      supportJobs={supportSectionJobs}
+                      onAddSupportJob={handleAddSupportJob}
+                      onUpdateSupportJob={handleUpdateSupportJob}
+                      onAddSupportProfessional={handleAddSupportProfessional}
+                      onUpdateSupportProfessionalInfo={handleUpdateSupportProfessionalInfo}
+                      financeSettings={financeSettings}
+                      activeRole={loggedInUser.role === 'ADMIN' ? 'SUPPORT' : userRole}
+                      loggedInUser={loggedInUser}
+                      supportNotifications={supportNotifications}
+                      onUpdateSupportNotifications={setSupportNotifications}
+                    />
+                  )}
+
+                  {(loggedInUser.role === 'ADMIN' ? adminViewMode === 'admin' : userRole === 'ADMIN') && (
+                    <AdminSection 
+                      properties={properties}
+                      professionals={professionals}
+                      requests={requests}
+                      supportJobs={supportJobs}
+                      existingSupportProfessionals={supportProfessionals}
+                      onUpdateRequest={handleUpdateRequest}
+                      onUpdateCleanerInfo={handleUpdateCleanerInfo}
+                      onAddProfessional={handleAddProfessional}
+                      registeredUsers={registeredUsers}
+                      onUpdateRegisteredUserStatus={handleUpdateRegisteredUserStatus}
+                      financeSettings={financeSettings}
+                      onChangeFinanceSettings={setFinanceSettings}
+                      financeLogs={financeLogs}
+                    />
+                  )}
+                </>
+              );
+            })()}
           </>
         )}
 
