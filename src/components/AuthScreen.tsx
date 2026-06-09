@@ -53,6 +53,7 @@ interface AuthScreenProps {
   registeredUsers: any[];
   onAddUser: (user: any) => void;
   hideDemoControls?: boolean;
+  financeSettings?: any;
 }
 
 const normalizeCity = (cityStr: string | undefined): string => {
@@ -80,7 +81,8 @@ export default function AuthScreen({
   onSwitchMode,
   registeredUsers,
   onAddUser,
-  hideDemoControls = false
+  hideDemoControls = false,
+  financeSettings
 }: AuthScreenProps) {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [selectedRegRole, setSelectedRegRole] = useState<UserRole>('HOST');
@@ -514,44 +516,64 @@ export default function AuthScreen({
 
           <div className="space-y-3 pt-4">
             <h2 className="text-xl md:text-2xl font-black font-display tracking-tight text-white leading-tight">
-              Profissionais confiáveis para manter seu imóvel sempre pronto.
+              Mais Praticidade, Menos Preocupação e Reservas Sem Estresse!
             </h2>
-            <p className="text-xs text-slate-300 leading-relaxed font-sans">
-              Limpeza, manutenção e suporte rápido para anfitriões e proprietários.
+            <p className="text-xs text-slate-200 leading-relaxed font-sans">
+              A CleanHost conecta proprietários aos melhores profissionais de limpeza e rede de apoio técnico da sua região. Imóvel pronto em minutos, inteligência e tranquilidade para o seu bolso.
             </p>
           </div>
         </div>
 
-        {/* Dynamic tips inside dark panel */}
-        <div className="mt-8 pt-6 border-t border-white/10 space-y-4 relative z-10">
-          <div className="flex gap-3 items-start">
-            <span className="text-lg text-[#12D6C5]">🧹</span>
+        {/* 🚀 Bloco Fase de Lançamento */}
+        <div className="bg-white/10 border border-white/10 p-4 rounded-2xl space-y-2 relative z-10 mt-4">
+          <h4 className="text-xs font-black text-[#12D6C5] flex items-center gap-1.5 font-display uppercase tracking-wider">
+            🚀 Fase de Lançamento CleanHost
+          </h4>
+          <p className="text-[11px] text-slate-200 leading-normal">
+            Os primeiros usuários participarão da construção da plataforma e terão acesso aos benefícios e taxas reduzidas da fase inicial.
+          </p>
+          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5 text-[9px] font-mono text-slate-300">
             <div>
-              <h4 className="text-xs font-bold text-white font-display">Checklists Padronizados</h4>
-              <p className="text-[10px] text-slate-300 leading-tight">Chega de surpresas nas notas do aplicativo de aluguel.</p>
+              <span className="block text-slate-400 font-sans uppercase">Taxa Parcerias Faxina:</span>
+              <strong className="text-white text-xs">{financeSettings?.cleanerFee ?? 5}%</strong>
             </div>
-          </div>
-          
-          <div className="flex gap-3 items-start">
-            <span className="text-lg text-emerald-400">⚡</span>
             <div>
-              <h4 className="text-xs font-bold text-white font-display">Suporte e Reparos em 2h</h4>
-              <p className="text-[10px] text-slate-300 leading-tight">Canos estourados, vazamentos e fechaduras com chaveiro ágil.</p>
-            </div>
-          </div>
-
-          <div className="flex gap-3 items-start">
-            <span className="text-lg text-[#12D6C5]">🎁</span>
-            <div>
-              <h4 className="text-xs font-bold text-white font-display">Programa de Fidelidade</h4>
-              <p className="text-[10px] text-slate-300 leading-tight">Ciclo de 10 chamados garante o 11º serviço técnico ou de faxina com taxa ZERO!</p>
+              <span className="block text-slate-400 font-sans uppercase">Taxa Apoio Técnico:</span>
+              <strong className="text-white text-xs">{financeSettings?.supportFee ?? 3}%</strong>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 text-[9px] text-slate-400 font-mono flex items-center gap-1">
+        {/* Dynamic tips inside dark panel */}
+        <div className="mt-4 pt-4 border-t border-white/10 space-y-3 relative z-10">
+          <div className="flex gap-2.5 items-start">
+            <span className="text-base text-[#12D6C5]">🧹</span>
+            <div>
+              <h4 className="text-[11px] font-bold text-white font-display">Mais Oportunidades &amp; Clientes</h4>
+              <p className="text-[9px] text-slate-300 leading-tight">Preencha sua agenda com faxinas agendadas de forma recorrente e simplificada.</p>
+            </div>
+          </div>
+          
+          <div className="flex gap-2.5 items-start">
+            <span className="text-base text-emerald-400">⚡</span>
+            <div>
+              <h4 className="text-[11px] font-bold text-white font-display">Suporte Técnico Agência</h4>
+              <p className="text-[9px] text-slate-300 leading-tight">Rede de apoio de resposta rápida para intervenções urgentes de elétrica, hidráulica e chaveiro.</p>
+            </div>
+          </div>
+
+          <div className="flex gap-2.5 items-start">
+            <span className="text-base text-[#12D6C5]">🎁</span>
+            <div>
+              <h4 className="text-[11px] font-bold text-white font-display">Programa de Fidelidade</h4>
+              <p className="text-[9px] text-slate-300 leading-tight">Ciclo de 10 chamados garante o 11º serviço técnico ou de faxina com taxa ZERO!</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 text-[9px] text-slate-400 font-mono flex items-center gap-1 relative z-10">
           <ShieldCheck className="w-3.5 h-3.5 text-[#12D6C5]" />
-          <span>Acesso criptografado em conformidade com a LGPD</span>
+          <span>Segurança e transparência total de ponta a ponta</span>
         </div>
       </div>
 
@@ -1156,52 +1178,178 @@ export default function AuthScreen({
 
     {/* SEÇÃO PÚBLICA: CIDADES CLEANHOST & EXPANSÃO */}
     <div className="max-w-4xl mx-auto my-12 px-4 sm:px-0 font-sans space-y-12 animate-fade-in" id="public-landing-expansion">
-      
-      {/* TEXTO INSTITUCIONAL & DIFERENCIAL */}
-      <div className="grid md:grid-cols-2 gap-8 items-start bg-slate-50 p-8 rounded-3xl border border-slate-150">
-        <div className="space-y-4">
-          <div className="inline-block bg-[#0A66FF]/10 text-[#0A66FF] text-[10px] font-black uppercase px-2.5 py-1 rounded-full">
-            Expansão Regional Inteligente
-          </div>
-          <h2 className="text-xl md:text-2xl font-black text-[#0B1F33] tracking-tight">
-            Crescemos onde a demanda acontece
+
+      {/* 6. DESTACAR DIFERENCIAL DA CLEANHOST */}
+      <div className="bg-[#0B1F33] text-white p-8 sm:p-10 rounded-3xl space-y-6 shadow-sm border border-slate-800 text-center relative overflow-hidden">
+        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 text-white/5 font-black text-9xl pointer-events-none">⭐</div>
+        <div className="max-w-2xl mx-auto space-y-3">
+          <span className="text-[10px] text-[#12D6C5] font-mono font-bold tracking-widest uppercase block">CONEXÃO E PRATICIDADE</span>
+          <h2 className="text-xl md:text-2xl font-black font-display tracking-tight text-white">
+            Tudo o que seu imóvel precisa em um só lugar.
           </h2>
-          <p className="text-xs text-slate-600 leading-relaxed font-semibold">
-            A CleanHost expande para novas regiões com base em cadastros reais de anfitriões, clientes e profissionais. Cadastre-se e ajude a levar a plataforma para sua cidade.
+          <p className="text-xs text-slate-300 leading-relaxed font-sans">
+            A CleanHost conecta de forma inteligente e ágil todos os profissionais necessários para manter seus imóveis sempre prontos para receber hóspedes reais.
           </p>
-          <div className="bg-sky-50 p-3.5 rounded-2xl border border-sky-100 flex items-start gap-2.5 mt-2">
-            <span className="text-sky-600 text-sm mt-0.5">💡</span>
-            <p className="text-[11px] text-sky-800 leading-normal">
-              Cidades Ativas de Lançamento Oficial: <strong>Jundiaí/SP e São Paulo/SP</strong>. Cadastros em outras cidades entram para a lista de espera ponderada para expansão ordenada.
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 text-left">
+          <div className="bg-slate-900/50 p-5 rounded-2xl border border-white/5 space-y-2">
+            <span className="text-xl">🏠</span>
+            <h4 className="text-xs font-black text-[#12D6C5] font-display uppercase tracking-wider">Anfitriões e Clientes</h4>
+            <p className="text-[11px] text-slate-300">Proprietários e gestores de aluguel por temporada focados em avaliações 5 estrelas e taxa de ocupação máxima.</p>
+          </div>
+          <div className="bg-slate-900/50 p-5 rounded-2xl border border-white/5 space-y-2">
+            <span className="text-xl">🧹</span>
+            <h4 className="text-xs font-black text-[#12D6C5] font-display uppercase tracking-wider">Profissionais de Limpeza</h4>
+            <p className="text-[11px] text-slate-300">Cleaners homologados com checklists padronizados e preferências em chamados urgentes.</p>
+          </div>
+          <div className="bg-slate-900/50 p-5 rounded-2xl border border-white/5 space-y-2">
+            <span className="text-xl">🔧</span>
+            <h4 className="text-xs font-black text-[#12D6C5] font-display uppercase tracking-wider">Rede de Apoio Especializada</h4>
+            <p className="text-[11px] text-slate-300">Chaveiros, eletricistas e encanadores de prontidão para emergências graves durante a estadia.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 1. ADICIONAR SEÇÃO "POR QUE FAZER PARTE DA CLEANHOST" */}
+      <div className="space-y-6">
+        <div className="text-center md:text-left space-y-1">
+          <h2 className="text-base font-black text-[#0B1F33] uppercase tracking-wider font-display">
+            🤝 Por que fazer parte da CleanHost?
+          </h2>
+          <p className="text-xs text-slate-500">
+            Benefícios corporativos e operacionais sob medida para cada tipo de perfil de usuário.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card Anfitrião */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-3xs space-y-4 hover:border-blue-100 transition-all flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="bg-[#0A66FF]/10 text-[#0A66FF] w-10 h-10 rounded-2xl flex items-center justify-center text-xl">
+                🏠
+              </div>
+              <h3 className="font-bold text-sm text-[#0B1F33] font-display">Anfitrião / Cliente</h3>
+              <p className="text-xs text-slate-500 leading-relaxed font-sans">
+                Praticidade absoluta para gerenciar e preparar suas propriedades com suporte rápido de emergência 24h.
+              </p>
+            </div>
+            <ul className="space-y-2 pt-3 border-t border-slate-50 text-[11px] text-slate-600 font-sans">
+              <li className="flex items-center gap-1.5 font-semibold">✅ Contratação ultra-rápida</li>
+              <li className="flex items-center gap-1.5 font-semibold">✅ Profissionais verificados próximos</li>
+              <li className="flex items-center gap-1.5 font-semibold">✅ Rede de apoio para emergências</li>
+              <li className="flex items-center gap-1.5 font-semibold">✅ Gestão do imóvel sem estresse</li>
+            </ul>
+          </div>
+
+          {/* Card Cleaner */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-3xs space-y-4 hover:border-emerald-100 transition-all flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="bg-emerald-500/10 text-emerald-600 w-10 h-10 rounded-2xl flex items-center justify-center text-xl">
+                🧹
+              </div>
+              <h3 className="font-bold text-sm text-[#0B1F33] font-display">Profissional de Limpeza</h3>
+              <p className="text-xs text-slate-500 leading-relaxed font-sans">
+                Aumente sua renda diária preenchendo sua agenda de serviços operacionais em sua própria região de atendimento.
+              </p>
+            </div>
+            <ul className="space-y-2 pt-3 border-t border-slate-50 text-[11px] text-slate-600 font-sans">
+              <li className="flex items-center gap-1.5 font-semibold">✅ Mais oportunidades de trabalho</li>
+              <li className="flex items-center gap-1.5 font-semibold">✅ Carteira de clientes recorrentes</li>
+              <li className="flex items-center gap-1.5 font-semibold">✅ Programa Fidelidade CleanHost</li>
+              <li className="flex items-center gap-1.5 font-semibold">✅ Serviços próximos à sua residência</li>
+            </ul>
+          </div>
+
+          {/* Card Rede Apoio */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-3xs space-y-4 hover:border-violet-100 transition-all flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="bg-violet-500/10 text-violet-600 w-10 h-10 rounded-2xl flex items-center justify-center text-xl">
+                🛠️
+              </div>
+              <h3 className="font-bold text-sm text-[#0B1F33] font-display">Rede de Apoio</h3>
+              <p className="text-xs text-slate-500 leading-relaxed font-sans">
+                Receba chamados frequentes de reparos, elétrica, hidráulica e chaveiro com pagamentos pix instantâneos.
+              </p>
+            </div>
+            <ul className="space-y-2 pt-3 border-t border-slate-50 text-[11px] text-slate-600 font-sans">
+              <li className="flex items-center gap-1.5 font-semibold">✅ Novos parceiros comerciais</li>
+              <li className="flex items-center gap-1.5 font-semibold">✅ Atendimento focado na sua região</li>
+              <li className="flex items-center gap-1.5 font-semibold">✅ Ampliação de carteira orgânica</li>
+              <li className="flex items-center gap-1.5 font-semibold">✅ Alta recorrência operacional</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. DESTACAR PROGRAMA FIDELIDADE & 7. REFORÇAR CONFIANÇA */}
+      <div className="grid md:grid-cols-2 gap-6 items-stretch">
+
+        {/* Programa Fidelidade Card */}
+        <div className="bg-emerald-600 text-white p-6 rounded-3xl space-y-4 flex flex-col justify-between border border-emerald-500 shadow-sm relative overflow-hidden">
+          <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 text-emerald-700/20 font-black text-9xl pointer-events-none">🎁</div>
+          <div className="space-y-2.5 relative z-10">
+            <span className="bg-emerald-500 text-white font-mono text-[9px] font-black uppercase px-2.5 py-1 rounded-full inline-block">
+              Taxa Zero de Verdade
+            </span>
+            <h3 className="text-lg font-black font-display text-white">🎁 Programa Fidelidade CleanHost</h3>
+            <p className="text-xs text-emerald-100 leading-relaxed font-semibold">
+              A cada 10 serviços de faxina ou manutenção técnica concluídos integralmente pela plataforma, o próximo serviço terá taxa de intermediação operacional ZERO!
             </p>
+          </div>
+
+          {/* PROGRESS BAR MOCKUP */}
+          <div className="bg-slate-950/30 p-4 rounded-2xl border border-white/10 space-y-2 relative z-10 mt-2">
+            <span className="text-[8px] uppercase font-mono tracking-widest text-[#12D6C5] block font-black">Meta de Recompensa Mensal</span>
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center text-[10px] font-mono text-emerald-200">
+                <span>10 de 10 concluídos</span>
+                <span className="text-[#12D6C5] font-black">Prêmio Ativo!</span>
+              </div>
+              <div className="flex gap-1">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="h-2 flex-1 rounded-sm bg-[#12D6C5]" title="Concluído"></div>
+                ))}
+              </div>
+              <p className="text-[10px] text-white/80 italic font-medium leading-tight">
+                Seu contador do programa de fidelidade é atualizado automaticamente ao fim de cada ciclo.
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="inline-block bg-emerald-500/10 text-emerald-700 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">
-            Ecossistema Completo de Serviços
+        {/* 7. REFORÇAR CONFIANÇA */}
+        <div className="bg-slate-50 border border-slate-150 p-6 rounded-3xl space-y-4 flex flex-col justify-between">
+          <div className="space-y-3">
+            <span className="bg-[#0B1F33] text-white font-mono text-[9px] font-black uppercase px-2.5 py-1 rounded-full inline-block">
+              Plataforma Blindada
+            </span>
+            <h3 className="text-lg font-black font-display text-[#0B1F33]">🔒 Segurança e Transparência</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Trabalhamos com dados reais e processos transparentes e auditáveis para máxima segurança de todos os membros.
+            </p>
           </div>
-          <h3 className="text-sm font-black text-[#0B1F33] uppercase">
-            Diferencial CleanHost
-          </h3>
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Diferente de soluções convencionais, não atendemos apenas faxina. Conectamos todas as necessidades de manutenção predial e hospedagem em um único ecossistema coordenado:
-          </p>
-          <div className="grid grid-cols-1 gap-2 pt-1 font-sans">
-            <div className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-150 shadow-3xs hover:scale-[1.01] transition-transform">
-              <span className="text-base">🧹</span>
-              <span className="text-[10px] text-slate-700"><strong>Profissionais de Limpeza:</strong> Faxinas recorrentes, limpezas pós-obra e vistorias rápidas</span>
+
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="bg-white p-3 rounded-xl border border-slate-100">
+              <span className="text-xs font-bold text-slate-800 block">👤 Usuários Aprovados</span>
+              <p className="text-[10px] text-slate-400 mt-0.5">Processo rigoroso de homologação de documentos.</p>
             </div>
-            <div className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-150 shadow-3xs hover:scale-[1.01] transition-transform">
-              <span className="text-base">🔧</span>
-              <span className="text-[10px] text-slate-700"><strong>Rede de Apoio:</strong> Eletricistas, Encanadores, Chaveiros, Pintores e Pedreiros qualificados</span>
+            <div className="bg-white p-3 rounded-xl border border-slate-100">
+              <span className="text-xs font-bold text-slate-800 block">⭐ Avaliações Reais</span>
+              <p className="text-[10px] text-slate-400 mt-0.5">Feedbacks reais auditados após cada serviço prestado.</p>
             </div>
-            <div className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-150 shadow-3xs hover:scale-[1.01] transition-transform">
-              <span className="text-base">🏠</span>
-              <span className="text-[10px] text-slate-700"><strong>Anfitriões e Clientes:</strong> Proprietários e gestores de aluguel por temporada</span>
+            <div className="bg-white p-3 rounded-xl border border-slate-150">
+              <span className="text-xs font-bold text-slate-800 block">📋 Histórico Auditável</span>
+              <p className="text-[10px] text-slate-400 mt-0.5">Siga os checklists de conformidade do início ao fim.</p>
+            </div>
+            <div className="bg-white p-3 rounded-xl border border-slate-150">
+              <span className="text-xs font-bold text-slate-800 block">🛡️ Reputação Orgânica</span>
+              <p className="text-[10px] text-slate-400 mt-0.5">Crescimento de destaque baseado nos seus resultados reais.</p>
             </div>
           </div>
         </div>
+
       </div>
 
       {/* CIDADES CLEANHOST & CONTADORES DE DEMANDA */}

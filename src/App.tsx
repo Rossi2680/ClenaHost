@@ -882,6 +882,7 @@ export default function App() {
             registeredUsers={registeredUsers}
             onAddUser={handleAddUser}
             hideDemoControls={hideDemoControls}
+            financeSettings={financeSettings}
           />
         ) : (
           <>
